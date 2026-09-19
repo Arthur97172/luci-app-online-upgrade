@@ -88,9 +88,9 @@ endef
 define Package/luci-app-online-upgrade/postinst
 #!/bin/sh
 [ -n "$${IPKG_INSTROOT}" ] || {
-	. /lib/functions/luci.sh
-	luci-reload
+	# 现代 OpenWrt 已移除 lua 时代的 /lib/functions/luci.sh，改为刷新 LuCI 缓存
 	rm -f /tmp/luci-indexcache
+	[ -f /etc/init.d/luci ] && /etc/init.d/luci reload
 	exit 0
 }
 endef
