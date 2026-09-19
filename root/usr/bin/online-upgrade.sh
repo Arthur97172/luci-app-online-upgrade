@@ -223,10 +223,12 @@ echo "[2/2] 正在查找最新固件..."
 FILE_NAMES=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].name")
 
 pick_file() {
-    local names="$1" f="" hint="" pat=""
+    local names="$1" f="" hint="" pat="" line=""
+    # 先清理每行行尾的 CR / 空白，得到干净的资产名列表（多行）
+    clean=$(echo "$names" | tr -d '\r' | sed 's/[[:space:]]*$//')
     # 1) 用户配置的自定义模式
     if [ -n "$FW_PATTERN" ] && [ "$FW_PATTERN" != "auto" ]; then
-        f=$(echo "$names" | grep -E "$FW_PATTERN" | head -1)
+        f=$(echo "$clean" | grep -E "$FW_PATTERN" | head -1)
         [ -n "$f" ] && { echo "$f"; return; }
     fi
     # 2) 按架构优先匹配（x86-64 / aarch64 / armv7 / mips 等）
@@ -235,7 +237,7 @@ pick_file() {
         for pat in ".*${hint}.*sysupgrade\\.itb$" ".*${hint}.*\\.itb$" \
                    ".*${hint}.*\\.img\\.gz$" ".*${hint}.*\\.img$" \
                    ".*${hint}.*\\.bin$"; do
-            f=$(echo "$names" | grep -E "$pat" | head -1)
+            f=$(echo "$clean" | grep -E "$pat" | head -1)
             [ -n "$f" ] && { echo "$f"; break; }
         done
         [ -n "$f" ] && return
@@ -246,13 +248,14 @@ pick_file() {
                '.*sysupgrade\.itb$' '.*\.itb$' \
                '.*sysupgrade\.bin$' '.*\.bin$' \
                '.*combined.*'; do
-        f=$(echo "$names" | grep -E "$pat" | head -1)
+        f=$(echo "$clean" | grep -E "$pat" | head -1)
         [ -n "$f" ] && { echo "$f"; break; }
     done
     echo "$f"
 }
 
-FILE_NAME=$(pick_file "$FILE_NAMES")
+# 取出选中文件名（已去 CR/尾部空白，保证单行）
+FILE_NAME=$(pick_file "$FILE_NAMES" | tr -d '\r' | sed 's/[[:space:]]*$//')
 if [ -z "$FILE_NAME" ]; then
     echo "错误：未找到匹配的固件文件"
     echo "提示：可在“高级配置→固件匹配”中自定义匹配模式"
@@ -260,13 +263,13 @@ if [ -z "$FILE_NAME" ]; then
     exit 1
 fi
 
-# 按 asset 索引精确取字段（不依赖文件名精确匹配，避免特殊字符/换行导致匹配失败）
-# 先找出选中文件名在资产列表中的下标
-ASSET_IDX=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].name" | grep -nxF "$FILE_NAME" | cut -d: -f1 | head -1)
+# 在“干净的资产名列表”里按行号定位选中文件名的下标
+CLEAN_NAMES=$(echo "$FILE_NAMES" | tr -d '\r' | sed 's/[[:space:]]*$//')
+ASSET_IDX=$(echo "$CLEAN_NAMES" | grep -nxF "$FILE_NAME" | cut -d: -f1 | head -1)
 if [ -z "$ASSET_IDX" ]; then
     ASSET_IDX=1
 fi
-# jsonfilter 的数组下标从 1 开始
+# jsonfilter 的数组下标从 1 开始（与行号一致）
 ASSET_UPDATED=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].updated_at" 2>/dev/null)
 ASSET_SIZE=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].size" 2>/dev/null)
 DOWNLOAD_URL=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].browser_download_url" 2>/dev/null)
