@@ -260,10 +260,25 @@ if [ -z "$FILE_NAME" ]; then
     exit 1
 fi
 
-ASSET_UPDATED=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[@.name=\"${FILE_NAME}\"].updated_at")
+# 按 asset 索引精确取字段（不依赖文件名精确匹配，避免特殊字符/换行导致匹配失败）
+# 先找出选中文件名在资产列表中的下标
+ASSET_IDX=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].name" | grep -nxF "$FILE_NAME" | cut -d: -f1 | head -1)
+if [ -z "$ASSET_IDX" ]; then
+    ASSET_IDX=1
+fi
+# jsonfilter 的数组下标从 1 开始
+ASSET_UPDATED=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].updated_at" 2>/dev/null)
+ASSET_SIZE=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].size" 2>/dev/null)
+DOWNLOAD_URL=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].browser_download_url" 2>/dev/null)
 ASSET_UPDATED_LOCAL=$(utc_to_local "$ASSET_UPDATED")
-ASSET_SIZE=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[@.name=\"${FILE_NAME}\"].size")
-DOWNLOAD_URL=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[@.name=\"${FILE_NAME}\"].browser_download_url")
+
+# 校验下载 URL 是否解析成功（上次故障根因：URL 为空导致下载到 1797 字节垃圾文件）
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo "错误：未能解析固件下载地址（jsonfilter 取不到 browser_download_url）"
+    echo "提示：固件文件名为 \"${FILE_NAME}\"，请确认该 Release 确实包含此文件"
+    rm -f "$TMP_JSON"
+    exit 1
+fi
 
 # 提取版本号（从固件文件名）
 FW_VERSION_RELEASE=$(extract_fw_version "$FILE_NAME")
@@ -378,7 +393,8 @@ FULL_URL="${PROXY}${DOWNLOAD_URL}"
 echo ""
 echo "Step 1: 下载固件..."
 DOWNLOAD_SKIP=0
-if [ -f "$TMP_FIRMWARE" ] && [ -f "${TMP_FIRMWARE}.ts" ]; then
+# 仅当已知编译时间戳且缓存文件存在时才考虑跳过（避免 ASSET_UPDATED 为空时误跳过）
+if [ -n "$ASSET_UPDATED" ] && [ -f "$TMP_FIRMWARE" ] && [ -f "${TMP_FIRMWARE}.ts" ]; then
     LOCAL_TS=$(cat "${TMP_FIRMWARE}.ts")
     if [ "$LOCAL_TS" = "$ASSET_UPDATED" ]; then
         echo "  固件已下载，跳过（${ASSET_UPDATED_LOCAL}）"
@@ -395,6 +411,17 @@ if [ "$DOWNLOAD_SKIP" = "0" ]; then
         echo "错误：下载失败！（curl exit: $CURL_EXIT）"
         rm -f "$TMP_FIRMWARE"
         exit 1
+    fi
+    # 校验文件大小与 GitHub 标注的 size 一致，防止下载到错误页/被截断的假固件
+    if [ -n "$ASSET_SIZE" ]; then
+        ACTUAL_SIZE=$(wc -c < "$TMP_FIRMWARE" 2>/dev/null | tr -d ' ')
+        if [ "$ACTUAL_SIZE" != "$ASSET_SIZE" ]; then
+            echo "failed:固件大小不符（预期 ${ASSET_SIZE} 字节，实际 ${ACTUAL_SIZE}）" > /tmp/online-upgrade-status
+            echo "错误：固件大小不符（预期 ${ASSET_SIZE} 字节，实际 ${ACTUAL_SIZE} 字节）"
+            echo "提示：下载可能被代理拦截或返回了错误页，请检查 PROXY 配置"
+            rm -f "$TMP_FIRMWARE"
+            exit 1
+        fi
     fi
     echo "$ASSET_UPDATED" > "${TMP_FIRMWARE}.ts"
     echo "  下载成功 ($(du -h "$TMP_FIRMWARE" | cut -f1))"

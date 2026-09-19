@@ -132,8 +132,9 @@ return view.extend({
 				{p:100, t:'刷写完成，路由器即将重启...'}
 			];
 			var idx = 0;
+			// 假进度条只在到达刷写阶段前推进；进入刷写后改由真实状态驱动
 			var interval = setInterval(function() {
-				if (idx < steps.length) {
+				if (idx < 3) {
 					var bar = document.getElementById('progress-bar');
 					var label = document.getElementById('progress-label');
 					var text = document.getElementById('progress-text');
@@ -142,21 +143,27 @@ return view.extend({
 					if (text) text.textContent = steps[idx].t;
 					updateOutput(steps[idx].t + '\n');
 					idx++;
-				} else {
-					clearInterval(interval);
-					showRebootOverlay();
 				}
 			}, 2000);
 
 			fs.exec('/usr/bin/online-upgrade.sh', ['background']);
 
+			// 升级流程是否已进入刷写阶段
+			var reachedSysupgrade = false;
+			// 自进入 sysupgrade 状态后已轮询的次数（用于超时判定）
+			var sysupgradePolls = 0;
+			// 路由器可能已重启：连续多次读取 status 文件失败（连接断开）
+			var disconnectStreak = 0;
 			var pollFails = 0;
 			if (pollTimer) clearInterval(pollTimer);
 			pollTimer = setInterval(function() {
 				fs.exec('/bin/cat', ['/tmp/online-upgrade-status']).then(function(r) {
 					pollFails = 0;
+					// 能读到 status 说明路由器尚未重启
+					disconnectStreak = 0;
 					var status = (r.stdout || '').trim();
 					if (status.indexOf('failed:') === 0) {
+						// 升级明确失败：停止轮询并显示错误
 						clearInterval(interval);
 						clearInterval(pollTimer);
 						pollTimer = null;
@@ -169,11 +176,34 @@ return view.extend({
 						var forceBtn = document.getElementById('btn-force');
 						if (forceBtn) forceBtn.style.display = 'inline-block';
 					} else if (status.indexOf('sysupgrade') === 0) {
+						// 已进入刷写阶段：不立即弹重启框，继续轮询等待路由器真正重启
+						reachedSysupgrade = true;
+						sysupgradePolls++;
+						updateOutput('系统正在刷写固件，请等待路由器重启...\n');
+						if (sysupgradePolls > 20) {
+							// 进入刷写后约 60 秒仍在线，判定可能失败，读取日志
+							clearInterval(interval);
+							fs.exec('/bin/cat', ['/tmp/online-upgrade.log']).then(function(rl) {
+								var last = (rl.stdout || '').split('\n').slice(-5).join('\n');
+								updateOutput('\n⚠️ 已进入刷写阶段但长时间未重启，可能失败：\n' + last + '\n');
+							});
+						}
+					} else {
+						// backing_up / downloading / downloaded / saving_ts / 空
+						sysupgradePolls = 0;
+					}
+				}).catch(function() {
+					// 读取失败：可能是路由器正在重启导致连接断开
+					disconnectStreak++;
+					if (reachedSysupgrade && disconnectStreak >= 2) {
+						clearInterval(interval);
 						clearInterval(pollTimer);
 						pollTimer = null;
 						showRebootOverlay();
+					} else {
+						pollFails++;
 					}
-				}).catch(function() {});
+				});
 			}, 3000);
 		}
 
