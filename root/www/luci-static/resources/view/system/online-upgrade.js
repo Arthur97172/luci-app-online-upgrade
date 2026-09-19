@@ -298,6 +298,27 @@ return view.extend({
 			fileInput.click();
 		}
 
+		function deleteBackups() {
+			// 删除 /root/ 下的所有备份文件
+			fs.exec('/bin/sh', ['-c', 'ls /root/pre-upgrade-backup-*.tar.gz 2>/dev/null']).then(function(r) {
+				var files = (r.stdout || '').trim();
+				if (!files) {
+					ui.addNotification(null, E('p', '没有可删除的备份文件'), 'info');
+					return;
+				}
+				var names = files.split('\n').map(function(f) { return f.split('/').pop(); });
+				if (!confirm('确定删除以下所有备份文件？\n\n' + names.join('\n') + '\n\n此操作不可撤销！')) return;
+				fs.exec('/bin/sh', ['-c', 'rm -f /root/pre-upgrade-backup-*.tar.gz && echo OK']).then(function(r2) {
+					var ok = (r2.stdout || '').indexOf('OK') >= 0;
+					updateOutput(ok ? '✅ 已删除 ' + names.length + ' 个备份文件\n' : '❌ 删除备份文件失败\n');
+					if (ok) {
+						ui.addNotification(null, E('p', '✅ 已删除全部备份文件'), 'info');
+						refreshBackupInfo();
+					}
+				});
+			});
+		}
+
 		// 文件选择后的上传恢复处理
 		function handleManualBackupFile(evt) {
 			var file = evt.target.files[0];
@@ -448,6 +469,7 @@ return view.extend({
 					E('button', {id: 'btn-download', class: 'btn cbi-button', style: 'display:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #4CAF50;color:#4CAF50;background:transparent;', click: function() { var p = window.location.pathname.match(/^\/.*\/admin/) || ['/cgi-bin/luci/admin']; var b = p[0].replace('/admin', ''); window.open(b + '/admin/system/online_upgrade/download', '_blank'); }}, '⬇ 下载备份'),
 					E('button', {id: 'btn-auto-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: autoRestore, title: '从路由器本地的备份文件恢复'}, '🔄 自动恢复'),
 					E('button', {id: 'btn-manual-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #e91e63;color:#e91e63;background:transparent;', click: manualRestore, title: '从本地上传备份文件恢复'}, '📂 手动恢复'),
+					E('button', {id: 'btn-delete-backups', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #f44336;color:#f44336;background:transparent;', click: deleteBackups, title: '删除 /root/ 下的所有备份文件'}, '🗑 删除恢复'),
 					E('input', {id: 'manual-backup-file', type: 'file', accept: '.tar.gz,.tgz,.gz', style: 'display:none', change: handleManualBackupFile})
 					]),
 					E('div', {id: 'backup-hint', style: 'color:#999;font-size:12px;padding:4px 0;'}, '状态检查中...')
