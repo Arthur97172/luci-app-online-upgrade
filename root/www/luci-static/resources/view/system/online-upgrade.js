@@ -67,11 +67,13 @@ return view.extend({
 						var el = document.getElementById('latest-size');
 						if (el) el.textContent = m[1].trim();
 					}
+					// 新版本号
 					m = lines[i].match(/新固件版本:\s*(.+)/);
 					if (m) {
 						var el = document.getElementById('new-ver');
 						if (el) el.textContent = m[1].trim();
 					}
+					// 检测依据
 					m = lines[i].match(/检测依据:\s*(.+)/);
 					if (m) {
 						var el = document.getElementById('check-reason');
@@ -182,6 +184,7 @@ return view.extend({
 			updateOutput('正在创建配置备份...\n');
 			fs.exec('/usr/bin/online-upgrade.sh', ['backup']).then(function(r) {
 				updateOutput(r.stdout + (r.stderr ? '\n' + r.stderr : '') + '\n');
+				// 刷新备份信息
 				refreshBackupInfo();
 			}).catch(function(e) {
 				updateOutput('❌ 备份失败: ' + e.message + '\n');
@@ -189,6 +192,7 @@ return view.extend({
 		}
 
 		function refreshBackupInfo() {
+			// 刷新备份文件信息显示
 			fs.exec('/bin/sh', ['-c', "ls -t /root/pre-upgrade-backup-*.tar.gz 2>/dev/null | head -1 | while read f; do echo \"$f $(date -r \"$f\" '+%Y-%m-%d %H:%M:%S') $(du -h \"$f\" | cut -f1)\"; done"]).then(function(r) {
 				var hint = document.getElementById('backup-hint');
 				var dlBtn = document.getElementById('btn-download');
@@ -251,15 +255,17 @@ return view.extend({
 		}
 
 		function manualRestore() {
+			// 手动恢复（从本地上传备份文件）
 			var fileInput = document.getElementById('manual-backup-file');
 			if (!fileInput) return;
 			fileInput.click();
 		}
 
+		// 文件选择后的上传恢复处理
 		function handleManualBackupFile(evt) {
 			var file = evt.target.files[0];
 			if (!file) return;
-			evt.target.value = '';
+			evt.target.value = ''; // 清空以便再次选择同一文件
 
 			if (!file.name.match(/\.(tar\.gz|tgz|gz)$/i)) {
 				updateOutput('❌ 请选择 .tar.gz 格式的备份文件\n');
@@ -273,6 +279,7 @@ return view.extend({
 			var reader = new FileReader();
 			reader.onload = function(e) {
 				var arrayBuffer = e.target.result;
+
 				updateOutput('正在执行恢复...\n');
 				fetch('/cgi-bin/online-upgrade-restore', {
 					method: 'POST',
@@ -328,44 +335,23 @@ return view.extend({
 			if (arrow) arrow.textContent = hidden ? '▼' : '▶';
 		}
 
-		// 异步读取系统发行版、版本号以及 UCI 默认配置
+		// 读取当前版本和备份状态
 		setTimeout(function() {
-			// 1. 自动检测系统名称与版本
-			fs.exec('/bin/sh', ['-c', ". /etc/openwrt_release && echo \"${DISTRIB_ID:-OpenWrt}|${DISTRIB_RELEASE:-}|${DISTRIB_REVISION:-}\""]).then(function(r) {
-				var parts = (r.stdout || '').trim().split('|');
-				var sysName = parts[0] || 'OpenWrt';
-				var ver = parts[1] || '';
-				var rev = parts[2] || '';
-
-				var brandEl = document.getElementById('sys-brand-name');
-				if (brandEl) brandEl.textContent = sysName + ' ';
-
-				var verEl = document.getElementById('cur-ver');
-				if (verEl) verEl.textContent = ver;
-
-				var revEl = document.getElementById('cur-rev');
-				if (revEl && rev) revEl.textContent = (rev.indexOf('r') === 0 ? rev : 'r' + rev);
-			}).catch(function() {
-				var brandEl = document.getElementById('sys-brand-name');
-				if (brandEl) brandEl.textContent = 'OpenWrt ';
-			});
-
-			// 2. 自动从 UCI 读取已保存的仓库配置，若无则给出一个通用默认值
-			fs.exec('/bin/sh', ['-c', "uci get online-upgrade.settings.repo 2>/dev/null || echo ''"]).then(function(r) {
-				var repo = (r.stdout || '').trim();
-				if (repo) {
-					fs.exec('/bin/sh', ['-c', "uci get online-upgrade.settings.tag 2>/dev/null || echo ''"]).then(function(r2) {
-						var tag = (r2.stdout || '').trim() || 'latest';
-						var urlInput = document.getElementById('cfg-url');
-						var repoInput = document.getElementById('cfg-repo');
-						var tagInput = document.getElementById('cfg-tag');
-						if (urlInput) urlInput.value = 'https://github.com/' + repo + '/releases/tag/' + tag;
-						if (repoInput) repoInput.value = repo;
-						if (tagInput) tagInput.value = tag;
-					});
+			fs.exec('/bin/cat', ['/etc/openwrt_release']).then(function(r) {
+				var lines = (r.stdout || '').split('\n');
+				for (var i = 0; i < lines.length; i++) {
+					var m = lines[i].match(/DISTRIB_RELEASE='([^']+)'/);
+					if (m) {
+						var el = document.getElementById('cur-ver');
+						if (el) el.textContent = m[1];
+					}
+					m = lines[i].match(/DISTRIB_REVISION='r?([^']+)'/);
+					if (m) {
+						var el = document.getElementById('cur-rev');
+						if (el) el.textContent = 'r' + m[1];
+					}
 				}
 			});
-
 			refreshBackupInfo();
 		}, 100);
 
@@ -382,8 +368,8 @@ return view.extend({
 				E('div', {style: 'font-size:14px;margin-bottom:12px;'}, [
 					E('div', {style: 'padding:4px 0;'}, [
 						E('span', {style: 'color:#666;display:inline-block;width:80px;'}, '当前版本'),
-						E('span', {id: 'sys-brand-name', style: 'font-weight:600;'}, '检测中... '),
-						E('span', {id: 'cur-ver', style: 'font-weight:600;'}, ''),
+						E('span', {style: 'font-weight:600;'}, 'ImmortalWrt '),
+						E('span', {id: 'cur-ver', style: 'font-weight:600;'}, '加载中...'),
 						E('span', {id: 'cur-rev', style: 'color:#888;margin-left:4px;font-size:12px;'}, '')
 					]),
 					E('div', {style: 'padding:4px 0;'}, [
@@ -402,24 +388,24 @@ return view.extend({
 					E('button', {id: 'btn-upgrade', class: 'btn cbi-button-action important', style: 'display:none;background:#4CAF50;border-color:#4CAF50;', click: runUpgrade}, '立即升级'),
 					E('button', {id: 'btn-force', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;', click: runForceUpgrade}, '强制更新'),
 					E('span', {id: 'check-result', style: 'color:#888;font-size:12px;margin-left:4px;'}, '')
-				])
-			]),
+					])
+					]),
 
-			// 备份 & 恢复卡片
-			E('div', {'class': 'cbi-section', style: 'margin-bottom:16px;padding:20px;'}, [
-				E('div', {style: 'font-size:16px;font-weight:600;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px;'}, [
+					// 备份 & 恢复卡片
+					E('div', {'class': 'cbi-section', style: 'margin-bottom:16px;padding:20px;'}, [
+					E('div', {style: 'font-size:16px;font-weight:600;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px;'}, [
 					E('span', {style: 'font-size:18px;'}, '💾'),
 					'备份 & 恢复'
-				]),
-				E('div', {style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;'}, [
+					]),
+					E('div', {style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;'}, [
 					E('button', {id: 'btn-backup', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #2196F3;color:#2196F3;background:transparent;', click: runBackup, title: '创建配置备份到 /root/'}, '📦 创建备份'),
 					E('button', {id: 'btn-download', class: 'btn cbi-button', style: 'display:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #4CAF50;color:#4CAF50;background:transparent;', click: function() { var p = window.location.pathname.match(/^\/.*\/admin/) || ['/cgi-bin/luci/admin']; var b = p[0].replace('/admin', ''); window.open(b + '/admin/system/online_upgrade/download', '_blank'); }}, '⬇ 下载备份'),
 					E('button', {id: 'btn-auto-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: autoRestore, title: '从路由器本地的备份文件恢复'}, '🔄 自动恢复'),
 					E('button', {id: 'btn-manual-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #e91e63;color:#e91e63;background:transparent;', click: manualRestore, title: '从本地上传备份文件恢复'}, '📂 手动恢复'),
 					E('input', {id: 'manual-backup-file', type: 'file', accept: '.tar.gz,.tgz,.gz', style: 'display:none', change: handleManualBackupFile})
-				]),
-				E('div', {id: 'backup-hint', style: 'color:#999;font-size:12px;padding:4px 0;'}, '状态检查中...')
-			]),
+					]),
+					E('div', {id: 'backup-hint', style: 'color:#999;font-size:12px;padding:4px 0;'}, '状态检查中...')
+					]),
 
 			// 仓库配置
 			E('div', {'class': 'cbi-section', style: 'margin-bottom:16px;padding:20px;'}, [
@@ -428,7 +414,7 @@ return view.extend({
 					E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 						E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, 'Release 地址'),
 						E('div', {style: 'flex:1;min-width:200px;display:flex;align-items:center;gap:6px;'}, [
-							E('input', {id: 'cfg-url', type: 'text', style: 'flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', value: 'https://github.com/your-repo/firmware-builder/releases/tag/latest'}),
+							E('input', {id: 'cfg-url', type: 'text', style: 'flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', value: 'https://github.com/gooyjq/ImmortalWrt-Builder/releases/tag/Autobuild-x86-64'}),
 							E('button', {class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;', click: parseUrl}, '解析'),
 							E('span', {style: 'font-size:12px;color:#888;'}, '自动解析仓库和标签')
 						])
@@ -442,11 +428,11 @@ return view.extend({
 					E('div', {id: 'adv-body', style: 'display:none;'}, [
 						E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 							E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, 'GitHub 仓库'),
-							E('input', {id: 'cfg-repo', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', value: 'your-repo/firmware-builder', readonly: 'readonly'})
+							E('input', {id: 'cfg-repo', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', value: 'gooyjq/ImmortalWrt-Builder', readonly: 'readonly'})
 						]),
 						E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 							E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, 'Release 标签'),
-							E('input', {id: 'cfg-tag', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', value: 'latest', readonly: 'readonly'})
+							E('input', {id: 'cfg-tag', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', value: 'Autobuild-x86-64', readonly: 'readonly'})
 						]),
 						E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 							E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, '固件匹配'),
