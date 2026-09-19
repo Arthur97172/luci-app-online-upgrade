@@ -89,6 +89,13 @@ return view.extend({
 
 		function showRebootOverlay() {
 			if (document.getElementById('reboot-overlay')) return;
+			// 刷写完成：先把进度条推到 100%，再弹重启提示，保证逻辑连贯
+			var bar = document.getElementById('progress-bar');
+			var label = document.getElementById('progress-label');
+			var text = document.getElementById('progress-text');
+			if (bar) bar.style.width = '100%';
+			if (label) label.textContent = '100%';
+			if (text) text.textContent = '刷写完成，路由器即将重启...';
 			var seconds = 180;
 			var overlay = E('div', {id: 'reboot-overlay', style: 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;'}, [
 				E('div', {style: 'font-size:28px;font-weight:600;margin-bottom:10px;'}, '🔄 路由器正在重启'),
