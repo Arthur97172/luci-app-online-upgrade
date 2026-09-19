@@ -12,9 +12,9 @@ tag.default = "Autobuild-x86-64"
 tag.rmempty = false
 
 local pattern = s:option(Value, "firmware_pattern", "固件匹配模式",
-    "用于匹配固件文件名的正则表达式")
-pattern.default = "combined-efi.*\\.img\\.gz"
-pattern.rmempty = false
+    "留空或填 auto 自动匹配（兼容 .img.gz / .img / .itb / .bin）；也可填正则自定义匹配")
+pattern.default = "auto"
+pattern.rmempty = true
 
 local proxy = s:option(Value, "proxy", "下载代理",
     "GitHub 下载加速代理，如 https://ghfast.top/")

@@ -21,20 +21,53 @@ PROXY="$(get_uci proxy)"
 FW_PATTERN="$(get_uci firmware_pattern)"
 KEEP_CONFIG="$(get_uci keep_config)"
 
-[ -z "$REPO" ] && REPO="gooyjq/ImmortalWrt-Builder"
-[ -z "$TAG" ] && TAG="Autobuild-x86-64"
+# ===== 自动识别系统发行版与架构 =====
+# 兼容 ImmortalWrt / OpenWrt 及衍生系统
+detect_distro() {
+    local id="$(grep -E '^DISTRIB_ID=' /etc/openwrt_release 2>/dev/null | cut -d"'" -f2)"
+    case "$(echo "$id" | tr 'A-Z' 'a-z')" in
+        *immortalwrt*) echo "immortalwrt" ;;
+        *openwrt*)     echo "openwrt" ;;
+        *)
+            # 兜底：按存在性判断
+            if [ -f /etc/immortalwrt_release ]; then
+                echo "immortalwrt"
+            elif [ -f /etc/openwrt_release ]; then
+                echo "openwrt"
+            else
+                echo "unknown"
+            fi
+            ;;
+    esac
+}
+detect_arch() {
+    uname -m 2>/dev/null || echo "unknown"
+}
+
+DISTRO="$(detect_distro)"
+ARCH="$(detect_arch)"
+
+# 发行版相关默认仓库/标签（仅当用户未配置时使用）
+#  ImmortalWrt：使用官方构建源（默认）
+#  OpenWrt：无统一在线发布源，需用户自行配置仓库与标签
+if [ "$DISTRO" = "immortalwrt" ]; then
+    [ -z "$REPO" ] && REPO="gooyjq/ImmortalWrt-Builder"
+    [ -z "$TAG" ] && TAG="Autobuild-x86-64"
+else
+    [ -z "$REPO" ] && REPO=""
+    [ -z "$TAG" ] && TAG=""
+fi
 [ -z "$PROXY" ] && PROXY="https://ghfast.top/"
-[ -z "$FW_PATTERN" ] && FW_PATTERN="combined-efi.*\\.img\\.gz"
+[ -z "$FW_PATTERN" ] && FW_PATTERN="auto"
 
 API_URL="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
 TMP_JSON="/tmp/release.json"
-TMP_FIRMWARE="/tmp/firmware.img.gz"
 
 MODE="${1:-check}"
 
 echo "========================================"
 echo "  固件在线升级"
-echo "  仓库: ${REPO}  |  标签: ${TAG}"
+echo "  系统: ${DISTRO}  |  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
 echo "========================================"
 
 # ===== 工具函数 =====
@@ -62,6 +95,18 @@ extract_fw_version() {
     echo "${fwver:-0}"
 }
 
+# 提取修订号数字（用于 SNAPSHOT 快照固件判断新旧）
+# 支持：r36350 / 36350 / 文件名中的 36350-3a117c0c53 等
+extract_revision() {
+    local s="$1"
+    local rev
+    # 优先 r 前缀数字（如 r36350）
+    rev=$(echo "$s" | grep -oE 'r[0-9]+' | head -1 | tr -d 'r')
+    # 否则取 4-6 位数字段（如 36350 / r37339）
+    [ -z "$rev" ] && rev=$(echo "$s" | grep -oE '(^|[-_])[0-9]{4,6}([-_.]|$)' | grep -oE '[0-9]+' | head -1)
+    echo "$rev"
+}
+
 # 版本号字符串转可比较数值（如 25.12.0 → 251200）
 ver_to_num() {
     echo "$1" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}' 2>/dev/null || echo "0"
@@ -72,6 +117,17 @@ is_newer_version() {
     local cur_num=$(ver_to_num "$1")
     local new_num=$(ver_to_num "$2")
     [ "$cur_num" -lt "$new_num" ] 2>/dev/null && return 0 || return 1
+}
+
+# 架构关键字（用于优先匹配固件文件名，支持 x86_64 / ARM64 等）
+arch_hint() {
+    case "$ARCH" in
+        x86_64|amd64)          echo "x86-64" ;;
+        aarch64|arm64)         echo "aarch64|armv8|rockchip|arm64" ;;
+        armv7l|armv7|armv5teb) echo "armv7|armv5|mvebu|ipq|kirkwood|mpc85xx" ;;
+        mips|mipsel|mips64)    echo "mips|ramips|octeon|ipq40xx" ;;
+        *)                     echo "" ;;
+    esac
 }
 
 # ===== 后台升级模式 =====
@@ -102,6 +158,18 @@ if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
         exit 1
     fi
     exit 0
+fi
+
+# ===== 校验仓库配置 =====
+if [ -z "$REPO" ] || [ -z "$TAG" ]; then
+    echo ""
+    echo "错误：未配置 GitHub 仓库 / 标签。"
+    echo "当前系统为 ${DISTRO}，未使用默认发布源，请先配置："
+    echo "      uci set online-upgrade.settings.repo='owner/repo'"
+    echo "      uci set online-upgrade.settings.tag='your-release-tag'"
+    echo "      uci commit online-upgrade"
+    echo "      或在 LuCI 页面粘贴 Release 地址后点击“解析”"
+    exit 1
 fi
 
 # ===== 获取 Release 信息 =====
@@ -149,15 +217,45 @@ elif [ "$HTTP_CODE" != "200" ]; then
 fi
 
 # ===== 查找固件 =====
+# 兼容多种固件格式：*.img.gz / *.img / *.itb（ARM64 等）/ *.bin（部分厂商）
 echo ""
 echo "[2/2] 正在查找最新固件..."
 FILE_NAMES=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].name")
-FILE_NAME=$(echo "$FILE_NAMES" | grep -E "$FW_PATTERN" | head -1)
-if [ -z "$FILE_NAME" ]; then
-    FILE_NAME=$(echo "$FILE_NAMES" | grep -E "combined.*\.img\.gz$" | head -1)
-fi
+
+pick_file() {
+    local names="$1" f="" hint="" pat=""
+    # 1) 用户配置的自定义模式
+    if [ -n "$FW_PATTERN" ] && [ "$FW_PATTERN" != "auto" ]; then
+        f=$(echo "$names" | grep -E "$FW_PATTERN" | head -1)
+        [ -n "$f" ] && { echo "$f"; return; }
+    fi
+    # 2) 按架构优先匹配（x86-64 / aarch64 / armv7 / mips 等）
+    hint="$(arch_hint)"
+    if [ -n "$hint" ]; then
+        for pat in ".*${hint}.*sysupgrade\\.itb$" ".*${hint}.*\\.itb$" \
+                   ".*${hint}.*\\.img\\.gz$" ".*${hint}.*\\.img$" \
+                   ".*${hint}.*\\.bin$"; do
+            f=$(echo "$names" | grep -E "$pat" | head -1)
+            [ -n "$f" ] && { echo "$f"; break; }
+        done
+        [ -n "$f" ] && return
+    fi
+    # 3) 通用匹配（优先级：img.gz > img > sysupgrade.itb > itb > bin）
+    for pat in 'combined-efi.*\.img\.gz$' 'combined.*\.img\.gz$' \
+               '.*\.img\.gz$' '.*\.img$' \
+               '.*sysupgrade\.itb$' '.*\.itb$' \
+               '.*sysupgrade\.bin$' '.*\.bin$' \
+               '.*combined.*'; do
+        f=$(echo "$names" | grep -E "$pat" | head -1)
+        [ -n "$f" ] && { echo "$f"; break; }
+    done
+    echo "$f"
+}
+
+FILE_NAME=$(pick_file "$FILE_NAMES")
 if [ -z "$FILE_NAME" ]; then
     echo "错误：未找到匹配的固件文件"
+    echo "提示：可在“高级配置→固件匹配”中自定义匹配模式"
     rm -f "$TMP_JSON"
     exit 1
 fi
@@ -171,22 +269,57 @@ DOWNLOAD_URL=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[@.name=\"${FILE_NAME}\"
 FW_VERSION_RELEASE=$(extract_fw_version "$FILE_NAME")
 rm -f "$TMP_JSON"
 
+# 根据固件扩展名选择正确的临时文件名。
+# sysupgrade 会依据扩展名/文件魔数判断是否解压及刷写方式，
+# 若把 .itb / .bin 命名为 .img.gz 会导致刷写失败。
+case "$FILE_NAME" in
+    *.img.gz) FW_EXT="img.gz" ;;
+    *.tar.gz) FW_EXT="tar.gz" ;;
+    *.itb)    FW_EXT="itb" ;;
+    *.img)    FW_EXT="img" ;;
+    *.bin)    FW_EXT="bin" ;;
+    *.gz)     FW_EXT="gz" ;;
+    *)        FW_EXT="${FILE_NAME##*.}" ;;
+esac
+TMP_FIRMWARE="/tmp/firmware.${FW_EXT}"
+
 # ===== 获取当前固件版本 =====
 CURRENT_RELEASE=$(grep "DISTRIB_RELEASE" /etc/openwrt_release 2>/dev/null | cut -d"'" -f2)
 CURRENT_REVISION=$(grep "DISTRIB_REVISION" /etc/openwrt_release 2>/dev/null | cut -d"'" -f2 | sed "s/r//")
 CURRENT_ID=$(grep "DISTRIB_ID" /etc/openwrt_release 2>/dev/null | cut -d"'" -f2)
 
-# ===== 版本对比（基于版本号 + 时间戳）=====
+# ===== 版本对比（版本号 / SNAPSHOT 修订号 / 时间戳）=====
 LAST_TS="$(uci -q get online-upgrade.settings.last_upgrade_ts 2>/dev/null)"
 LAST_VERSION="$(uci -q get online-upgrade.settings.last_upgrade_version 2>/dev/null)"
 
 NEW_FIRMWARE=0
 UPDATE_REASON=""
 
+# 是否 SNAPSHOT 快照固件（无稳定版本号，改用修订号/时间戳判断新旧）
+IS_SNAPSHOT=0
+case "$CURRENT_RELEASE" in
+    SNAPSHOT|snapshot|*snapshot*) IS_SNAPSHOT=1 ;;
+esac
+
+# 当前修订号数值（r36350-3a117c0c53 → 36350）；新固件修订号（从文件名提取）
+CURRENT_REV_NUM="$(echo "$CURRENT_REVISION" | grep -oE '[0-9]+' | head -1)"
+FW_REV_NUM="$(extract_revision "$FILE_NAME")"
+
 # 判断是否有新固件
 if [ -z "$LAST_TS" ] && [ -z "$LAST_VERSION" ]; then
     NEW_FIRMWARE=1
     UPDATE_REASON="首次检测"
+elif [ "$IS_SNAPSHOT" = "1" ]; then
+    # SNAPSHOT：优先用修订号数值比较，缺失/相等则回退到编译时间戳
+    if [ -n "$CURRENT_REV_NUM" ] && [ -n "$FW_REV_NUM" ] && [ "$FW_REV_NUM" -gt "$CURRENT_REV_NUM" ] 2>/dev/null; then
+        NEW_FIRMWARE=1
+        UPDATE_REASON="新版 SNAPSHOT（r${FW_REV_NUM} > r${CURRENT_REV_NUM}）"
+    elif [ "$ASSET_UPDATED" != "$LAST_TS" ] 2>/dev/null; then
+        NEW_FIRMWARE=1
+        UPDATE_REASON="新版 SNAPSHOT（编译时间 ${ASSET_UPDATED_LOCAL}）"
+    else
+        UPDATE_REASON="已是最新 SNAPSHOT"
+    fi
 elif [ "$FW_VERSION_RELEASE" != "0" ] && [ "$CURRENT_RELEASE" != "$FW_VERSION_RELEASE" ]; then
     # 基于版本号比较
     if is_newer_version "$CURRENT_RELEASE" "$FW_VERSION_RELEASE"; then

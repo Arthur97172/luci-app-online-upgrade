@@ -338,18 +338,27 @@ return view.extend({
 		// 读取当前版本和备份状态
 		setTimeout(function() {
 			fs.exec('/bin/cat', ['/etc/openwrt_release']).then(function(r) {
+				var distro = '';
 				var lines = (r.stdout || '').split('\n');
 				for (var i = 0; i < lines.length; i++) {
-					var m = lines[i].match(/DISTRIB_RELEASE='([^']+)'/);
-					if (m) {
-						var el = document.getElementById('cur-ver');
-						if (el) el.textContent = m[1];
-					}
+					var m = lines[i].match(/DISTRIB_ID='([^']+)'/);
+					if (m) { distro = m[1]; var el = document.getElementById('cur-sys'); if (el) el.textContent = m[1] + ' '; }
+					m = lines[i].match(/DISTRIB_RELEASE='([^']+)'/);
+					if (m) { var el = document.getElementById('cur-ver'); if (el) el.textContent = m[1]; }
 					m = lines[i].match(/DISTRIB_REVISION='r?([^']+)'/);
-					if (m) {
-						var el = document.getElementById('cur-rev');
-						if (el) el.textContent = 'r' + m[1];
+					if (m) { var el = document.getElementById('cur-rev'); if (el) el.textContent = 'r' + m[1]; }
+				}
+				// 非 ImmortalWrt（如 OpenWrt）时，清空默认 ImmortalWrt 发布源，避免误配
+				if (distro && !/immortalwrt/i.test(distro)) {
+					var urlEl = document.getElementById('cfg-url');
+					if (urlEl && urlEl.value.indexOf('ImmortalWrt-Builder') >= 0) {
+						urlEl.value = '';
+						urlEl.placeholder = 'https://github.com/owner/repo/releases/tag/tag';
 					}
+					var repoEl = document.getElementById('cfg-repo');
+					if (repoEl && repoEl.value === 'gooyjq/ImmortalWrt-Builder') repoEl.value = '';
+					var tagEl = document.getElementById('cfg-tag');
+					if (tagEl && tagEl.value === 'Autobuild-x86-64') tagEl.value = '';
 				}
 			});
 			refreshBackupInfo();
@@ -368,7 +377,7 @@ return view.extend({
 				E('div', {style: 'font-size:14px;margin-bottom:12px;'}, [
 					E('div', {style: 'padding:4px 0;'}, [
 						E('span', {style: 'color:#666;display:inline-block;width:80px;'}, '当前版本'),
-						E('span', {style: 'font-weight:600;'}, 'ImmortalWrt '),
+						E('span', {id: 'cur-sys', style: 'font-weight:600;'}, '检测中...'),
 						E('span', {id: 'cur-ver', style: 'font-weight:600;'}, '加载中...'),
 						E('span', {id: 'cur-rev', style: 'color:#888;margin-left:4px;font-size:12px;'}, '')
 					]),

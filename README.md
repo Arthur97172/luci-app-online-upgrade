@@ -12,7 +12,10 @@ ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 - 支持 GitHub 下载加速代理
 - 升级前自动备份配置到 boot 分区
 - 强制更新：即使已是最新版本也可重新刷写
+- 自动识别运行系统（ImmortalWrt / OpenWrt）并适配默认配置
 - 自动检测路由器架构匹配固件文件
+- 兼容多种固件格式：`.img.gz` / `.img` / `.itb`（ARM64 等）/ `.bin`
+- 支持 SNAPSHOT 快照固件：用修订号（`r36350`）判断新旧，文件名无修订号时回退到编译时间戳
 - 同时编译 .ipk (opkg) 和 .apk (apk) 两种格式
 
 ## 使用方法
@@ -59,7 +62,7 @@ config online-upgrade 'settings'
     option repo 'gooyjq/ImmortalWrt-Builder'
     option tag 'Autobuild-x86-64'
     option proxy 'https://ghfast.top/'
-    option firmware_pattern 'combined-efi.*\\.img\\.gz'
+    option firmware_pattern 'auto'   # 留空或 auto 自动匹配；也可填正则
     option keep_config '1'
 ```
 
