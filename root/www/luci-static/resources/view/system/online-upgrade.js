@@ -89,7 +89,7 @@ return view.extend({
 
 		function showRebootOverlay() {
 			if (document.getElementById('reboot-overlay')) return;
-			var seconds = 100;
+			var seconds = 180;
 			var overlay = E('div', {id: 'reboot-overlay', style: 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;'}, [
 				E('div', {style: 'font-size:28px;font-weight:600;margin-bottom:10px;'}, '🔄 路由器正在重启'),
 				E('div', {style: 'font-size:14px;color:#aaa;margin-bottom:20px;'}, '固件刷写完成，配置将自动恢复，等待路由器重启...'),

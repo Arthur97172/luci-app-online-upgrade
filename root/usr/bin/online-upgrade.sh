@@ -254,8 +254,8 @@ pick_file() {
     echo "$f"
 }
 
-# 取出选中文件名（已去 CR/尾部空白，保证单行）
-FILE_NAME=$(pick_file "$FILE_NAMES" | tr -d '\r' | sed 's/[[:space:]]*$//')
+# 取出选中文件名（已去 CR/尾部空白；head -1 兜底保证单行，避免重复行污染）
+FILE_NAME=$(pick_file "$FILE_NAMES" | tr -d '\r' | sed 's/[[:space:]]*$//' | head -1)
 if [ -z "$FILE_NAME" ]; then
     echo "错误：未找到匹配的固件文件"
     echo "提示：可在“高级配置→固件匹配”中自定义匹配模式"
@@ -263,16 +263,20 @@ if [ -z "$FILE_NAME" ]; then
     exit 1
 fi
 
-# 在“干净的资产名列表”里按行号定位选中文件名的下标
+# 并行提取所有 asset 的字段：每个字段输出为多行，行序与 assets 数组一一对应。
+# 这样在“干净名字列表”里定位行号后，用同一行号从其它列表取字段，
+# 彻底绕开 jsonfilter 数组下标（busybox 上 0 基/1 基不确定）导致的错位。
+ALL_URLS=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].browser_download_url")
+ALL_UPDATED=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].updated_at")
+ALL_SIZES=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].size")
+
 CLEAN_NAMES=$(echo "$FILE_NAMES" | tr -d '\r' | sed 's/[[:space:]]*$//')
-ASSET_IDX=$(echo "$CLEAN_NAMES" | grep -nxF "$FILE_NAME" | cut -d: -f1 | head -1)
-if [ -z "$ASSET_IDX" ]; then
-    ASSET_IDX=1
-fi
-# jsonfilter 的数组下标从 1 开始（与行号一致）
-ASSET_UPDATED=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].updated_at" 2>/dev/null)
-ASSET_SIZE=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].size" 2>/dev/null)
-DOWNLOAD_URL=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[${ASSET_IDX}].browser_download_url" 2>/dev/null)
+IDX=$(echo "$CLEAN_NAMES" | grep -nxF "$FILE_NAME" | cut -d: -f1 | head -1)
+[ -z "$IDX" ] && IDX=1
+
+DOWNLOAD_URL=$(echo "$ALL_URLS" | sed -n "${IDX}p")
+ASSET_UPDATED=$(echo "$ALL_UPDATED" | sed -n "${IDX}p")
+ASSET_SIZE=$(echo "$ALL_SIZES" | sed -n "${IDX}p")
 ASSET_UPDATED_LOCAL=$(utc_to_local "$ASSET_UPDATED")
 
 # 校验下载 URL 是否解析成功（上次故障根因：URL 为空导致下载到 1797 字节垃圾文件）
