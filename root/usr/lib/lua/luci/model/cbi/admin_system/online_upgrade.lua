@@ -4,11 +4,11 @@ local m = Map("online-upgrade", "固件在线升级", "从 GitHub Releases 自�
 local s = m:section(NamedSection, "settings", "settings", "仓库配置")
 
 local repo = s:option(Value, "repo", "GitHub 仓库")
-repo.default = "gooyjq/ImmortalWrt-Builder"
+repo.default = "owner/repo"
 repo.rmempty = false
 
 local tag = s:option(Value, "tag", "Release 标签")
-tag.default = "Autobuild-x86-64"
+tag.default = "tag"
 tag.rmempty = false
 
 local pattern = s:option(Value, "firmware_pattern", "固件匹配模式",

@@ -51,8 +51,8 @@ ARCH="$(detect_arch)"
 #  ImmortalWrt：使用官方构建源（默认）
 #  OpenWrt：无统一在线发布源，需用户自行配置仓库与标签
 if [ "$DISTRO" = "immortalwrt" ]; then
-    [ -z "$REPO" ] && REPO="gooyjq/ImmortalWrt-Builder"
-    [ -z "$TAG" ] && TAG="Autobuild-x86-64"
+    [ -z "$REPO" ] && REPO="owner/repo"
+    [ -z "$TAG" ] && TAG="tag"
 else
     [ -z "$REPO" ] && REPO=""
     [ -z "$TAG" ] && TAG=""
@@ -67,7 +67,11 @@ MODE="${1:-check}"
 
 echo "========================================"
 echo "  固件在线升级"
-echo "  系统: ${DISTRO}  |  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
+if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
+    echo "  系统: ${DISTRO}  |  架构: ${ARCH}"
+else
+    echo "  系统: ${DISTRO}  |  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
+fi
 echo "========================================"
 
 # ===== 工具函数 =====

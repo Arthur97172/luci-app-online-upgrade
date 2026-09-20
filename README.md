@@ -2,6 +2,8 @@
 
 ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 
+本项目基于 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) 克隆而来，在此基础上做了大量优化与增强，特此感谢原仓库的辛勤付出。
+
 ![Screenshot](screenshot.png)
 
 ## 功能
@@ -59,8 +61,8 @@ UCI 配置文件 `/etc/config/online-upgrade`：
 ```bash
 config online-upgrade 'settings'
     option enabled '1'
-    option repo 'gooyjq/ImmortalWrt-Builder'
-    option tag 'Autobuild-x86-64'
+    option repo 'owner/repo'          # GitHub 仓库，需自行填写，如 gooyjq/ImmortalWrt-Builder
+    option tag 'tag'                  # Release 标签，需自行填写，如 Autobuild-x86-64
     option proxy 'https://ghfast.top/'
     option firmware_pattern 'auto'   # 留空或 auto 自动匹配；也可填正则
     option keep_config '1'

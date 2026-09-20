@@ -2,8 +2,8 @@
 
 config online-upgrade 'settings'
 	option enabled '0'
-	option repo 'gooyjq/ImmortalWrt-Builder'
-	option tag 'Autobuild-x86-64'
+	option repo 'owner/repo'
+	option tag 'tag'
 	option proxy 'https://ghfast.top/'
 	option firmware_pattern 'auto'
 	option keep_config '1'
