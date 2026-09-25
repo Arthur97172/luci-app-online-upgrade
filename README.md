@@ -2,8 +2,6 @@
 
 ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 
-本项目基于 [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade) 克隆而来，在此基础上做了大量优化与增强，特此感谢原仓库的辛勤付出。
-
 ![Screenshot](screenshot.png)
 
 ## 功能
