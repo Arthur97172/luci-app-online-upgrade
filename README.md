@@ -68,6 +68,12 @@ config online-upgrade 'settings'
     option keep_config '1'
 ```
 
-## 许可证
+## 🌟 Star戳一戳，好运加满！😆
+> **"点过 `Star` 的朋友，颜值与智慧双双在线！✨"**
+> 
+> **"您的每一个⭐️，都是开源土壤里的一缕阳光，让灵感发芽，让创造生长~"**
 
-GNU GENERAL PUBLIC LICENSE
+## 🎉 Thanks [![](https://img.shields.io/badge/-Thanks-FFFFFF.svg)](#-Thanks-)
+- [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)
+
+本项目基于 gooyjq/luci-app-online-upgrade 克隆而来，特此感谢原仓库作者的辛勤付出！！！
