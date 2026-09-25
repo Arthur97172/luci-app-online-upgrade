@@ -549,8 +549,8 @@ return view.extend({
 						])
 					])
 				]),
-									E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, "提示：在点击'检查更新'前，请先在'Release 地址'栏内填入固件 tag 链接，然后再依次点击'解析'与'保存配置'。"),
-E('div', {style: 'margin-top:14px;text-align:right;'}, [
+				E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, "提示：在点击'检查更新'前，请先在'Release 地址'栏内填入固件 tag 链接，然后再依次点击'解析'与'保存配置'。"),
+				E('div', {style: 'margin-top:14px;text-align:right;'}, [
 					E('button', {class: 'btn cbi-button-save', style: 'padding:7px 20px;border-radius:4px;cursor:pointer;', click: saveCfg}, '保存配置')
 				])
 			]),
