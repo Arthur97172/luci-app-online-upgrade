@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-online-upgrade
 PKG_VERSION:=1.0.4
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 # 默认构建类型为 ipk，后续在 CI 中可通过修改 .config 生成 apk
 PKG_BUILD_TYPE ?= ipk
 

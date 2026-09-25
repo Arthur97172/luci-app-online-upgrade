@@ -485,7 +485,7 @@ return view.extend({
 					E('span', {id: 'check-result', style: 'color:#888;font-size:12px;margin-left:4px;'}, '')
 					]),
 				E('div', {style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;'}, [
-					E('span', {style: 'color:#666;font-size:12px;margin-right:4px;'}, '保留系统配置:'),
+					E('span', {style: 'color:#666;font-size:12px;margin-right:4px;'}, '不保留系统配置:'),
 					E('button', {id: 'btn-upgrade-clean', class: 'btn cbi-button', style: 'display:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: runUpgradeClean}, '立即升级(干净)'),
 					E('button', {id: 'btn-force-clean', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: runForceUpgradeClean}, '强制更新(干净)')
 				])
