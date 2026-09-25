@@ -108,10 +108,10 @@ return view.extend({
 			if (bar) bar.style.width = '100%';
 			if (label) label.textContent = '100%';
 			if (text) text.textContent = '刷写完成，路由器即将重启...';
-			var seconds = 180;
+			var seconds = 120;
 			var overlay = E('div', {id: 'reboot-overlay', style: 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;'}, [
 				E('div', {style: 'font-size:28px;font-weight:600;margin-bottom:10px;'}, '🔄 路由器正在重启'),
-				E('div', {style: 'font-size:14px;color:#aaa;margin-bottom:20px;'}, '固件刷写完成，配置将自动恢复，等待路由器重启...'),
+				E('div', {style: 'font-size:14px;color:#aaa;margin-bottom:20px;'}, '固件刷写完成，请勿断电！若 IP 变更，请用新地址重新登录。'),
 				E('div', {id: 'countdown', style: 'font-size:48px;font-weight:700;'}, String(seconds)),
 				E('div', {style: 'font-size:13px;color:#888;margin-top:8px;margin-bottom:24px;'}, '秒后自动刷新'),
 				E('button', {style: 'padding:10px 30px;font-size:16px;border:2px solid #4CAF50;background:transparent;color:#4CAF50;border-radius:8px;cursor:pointer;', click: function() { window.location.reload(); }}, '立即刷新')
