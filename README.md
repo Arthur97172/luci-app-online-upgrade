@@ -40,12 +40,12 @@ make package/luci-app-online-upgrade/compile V=s
 
 **opkg (ImmortalWrt 23.05 及更早):**
 ```bash
-opkg install luci-app-online-upgrade_1.0.6_all.ipk
+opkg install luci-app-online-upgrade_1.0.7_all.ipk
 ```
 
 **apk (ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.0.6-r2.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.0.7-r1.apk
 ```
 
 ## 依赖

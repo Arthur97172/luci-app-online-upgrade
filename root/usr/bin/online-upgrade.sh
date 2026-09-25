@@ -485,7 +485,48 @@ else
 /usr/lib/lua/luci/model/cbi/admin_system/online_upgrade.lua
 /www/luci-static/resources/view/system/online-upgrade.js"
     fi
-    ( cd / && tar czf "$BACKUP_TMP" $PKG_FILES 2>/dev/null )
+    # 过滤掉已不存在的文件（如已被删除的 uci-defaults 脚本），避免 tar 报错
+    EXISTING_FILES=""
+    for f in $PKG_FILES; do
+        [ -e "$f" ] && EXISTING_FILES="$EXISTING_FILES $f"
+    done
+    # 保存包管理器注册信息，供升级后恢复注册（避免 opkg/apk 查不到本包）
+    mkdir -p /etc/online-upgrade-pkgdb
+    if command -v apk >/dev/null 2>&1 && apk info -e luci-app-online-upgrade >/dev/null 2>&1; then
+        awk -v RS='' '/^P:luci-app-online-upgrade$/' /lib/apk/db/installed > /etc/online-upgrade-pkgdb/apk-installed 2>/dev/null
+    elif command -v opkg >/dev/null 2>&1; then
+        opkg status luci-app-online-upgrade > /etc/online-upgrade-pkgdb/opkg-status 2>/dev/null
+        mkdir -p /etc/online-upgrade-pkgdb/opkg-info
+        cp /usr/lib/opkg/info/luci-app-online-upgrade.* /etc/online-upgrade-pkgdb/opkg-info/ 2>/dev/null
+    fi
+    # 现场生成首启注册修复脚本（uci-defaults 执行后自动删除，保证一定存在）
+    cat > /etc/uci-defaults/92-online-upgrade-register <<'EOF'
+#!/bin/sh
+# 干净升级后：插件文件已由备份归档恢复，此处补回包管理器注册信息
+[ -d /etc/online-upgrade-pkgdb ] || exit 0
+if command -v apk >/dev/null 2>&1; then
+	if ! apk info -e luci-app-online-upgrade >/dev/null 2>&1 && [ -s /etc/online-upgrade-pkgdb/apk-installed ]; then
+		cat /etc/online-upgrade-pkgdb/apk-installed >> /lib/apk/db/installed
+		echo "" >> /lib/apk/db/installed
+		logger -t "online-upgrade" "已恢复 apk 包注册信息"
+	fi
+elif command -v opkg >/dev/null 2>&1; then
+	if ! opkg status luci-app-online-upgrade 2>/dev/null | grep -q '^Status:.*installed'; then
+		[ -s /etc/online-upgrade-pkgdb/opkg-status ] && {
+			cat /etc/online-upgrade-pkgdb/opkg-status >> /usr/lib/opkg/status
+			echo "" >> /usr/lib/opkg/status
+		}
+		mkdir -p /usr/lib/opkg/info
+		cp /etc/online-upgrade-pkgdb/opkg-info/* /usr/lib/opkg/info/ 2>/dev/null
+		logger -t "online-upgrade" "已恢复 opkg 包注册信息"
+	fi
+fi
+rm -rf /etc/online-upgrade-pkgdb
+exit 0
+EOF
+    chmod +x /etc/uci-defaults/92-online-upgrade-register
+    EXISTING_FILES="$EXISTING_FILES /etc/online-upgrade-pkgdb /etc/uci-defaults/92-online-upgrade-register"
+    ( cd / && tar czf $BACKUP_TMP $EXISTING_FILES 2>/dev/null )
     if [ $? -ne 0 ] || [ ! -s "$BACKUP_TMP" ]; then
         echo "错误：插件备份失败！"
         exit 1
