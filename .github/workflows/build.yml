@@ -62,9 +62,9 @@ jobs:
       - name: Collect artifact
         run: |
           mkdir -p artifacts
-          find sdk/bin/packages -name "luci-app-online-upgrade*.${{ matrix.pkg_ext }}" -exec cp {} artifacts/ \;
-          find sdk/bin/targets -name "*${{ matrix.pkg_ext }}" -exec cp {} artifacts/ \; 2>/dev/null || true
-          ls -lh artifacts/ 2>/dev/null || echo "(no ${{ matrix.pkg_ext }})"
+          find sdk/bin/packages -type f -name "luci-app-online-upgrade*.${{ matrix.pkg_ext }}" -exec cp {} artifacts/ \;
+          test -s artifacts/* || { echo "No artifact found!"; exit 1; }
+          ls -lh artifacts/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
