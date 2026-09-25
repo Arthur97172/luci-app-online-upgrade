@@ -70,7 +70,7 @@ echo "  固件在线升级"
 if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
     echo "  系统: ${DISTRO}  |  架构: ${ARCH}"
 else
-    echo "  系统: ${DISTRO}  |  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
+    echo "  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
 fi
 echo "========================================"
 
