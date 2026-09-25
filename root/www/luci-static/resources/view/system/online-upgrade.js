@@ -192,7 +192,11 @@ return view.extend({
 						if (forceBtn) forceBtn.style.display = 'inline-block';
 					} else if (status.indexOf('sysupgrade') === 0) {
 						// 已进入刷写阶段：不立即弹重启框，继续轮询等待路由器真正重启
-						reachedSysupgrade = true;
+						if (!reachedSysupgrade) {
+							reachedSysupgrade = true;
+							updateProgress(75, '正在刷写固件，配置将自动恢复！');
+							updateOutput('系统正在进入刷写阶段，进度推进到 75%...\n');
+						}
 						sysupgradePolls++;
 						updateOutput('系统正在刷写固件，请等待路由器重启...\n');
 						if (sysupgradePolls > 20) {
