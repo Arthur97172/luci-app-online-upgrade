@@ -468,8 +468,29 @@ if [ "$KEEP_MODE" = "keep" ]; then
     echo "  备份中包含 $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) 个文件"
 else
     echo ""
-    echo "Step 3: 跳过完整配置备份（干净升级模式）"
-    BACKUP_TMP=""
+    echo "Step 3: 创建本插件最小备份（干净升级模式，系统配置不保留）..."
+    # 从包管理器查询本插件的全部已安装文件，打成最小归档
+    PKG_FILES=$(apk info -L luci-app-online-upgrade 2>/dev/null | grep '^/' || opkg files luci-app-online-upgrade 2>/dev/null | grep '^/')
+    # 兜底：包管理器查询失败时使用已知文件清单
+    if [ -z "$PKG_FILES" ]; then
+        PKG_FILES="/etc/config/online-upgrade
+/usr/bin/online-upgrade.sh
+/www/cgi-bin/online-upgrade-restore
+/lib/upgrade/keep.d/online-upgrade
+/etc/uci-defaults/99-online-upgrade
+/etc/uci-defaults/90-online-upgrade-auto
+/usr/lib/lua/luci/controller/admin_system/online_upgrade.lua
+/usr/share/luci/menu.d/luci-app-online-upgrade.json
+/usr/share/rpcd/acl.d/luci-app-online-upgrade.json
+/usr/lib/lua/luci/model/cbi/admin_system/online_upgrade.lua
+/www/luci-static/resources/view/system/online-upgrade.js"
+    fi
+    ( cd / && tar czf "$BACKUP_TMP" $PKG_FILES 2>/dev/null )
+    if [ $? -ne 0 ] || [ ! -s "$BACKUP_TMP" ]; then
+        echo "错误：插件备份失败！"
+        exit 1
+    fi
+    echo "  备份成功: $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) 个插件文件"
 fi
 
 # ---- Step 4: 执行 sysupgrade
@@ -477,7 +498,7 @@ echo ""
 if [ "$KEEP_MODE" = "keep" ]; then
     echo "Step 4: 执行 sysupgrade（自动恢复配置）..."
 else
-    echo "Step 4: 执行 sysupgrade（不恢复配置，干净升级）..."
+    echo "Step 4: 执行 sysupgrade（干净升级，仅保留本插件）..."
 fi
 echo "sysupgrade" > /tmp/online-upgrade-status
 sync
@@ -492,8 +513,8 @@ if [ "$KEEP_MODE" = "keep" ]; then
     echo "  命令: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
     /sbin/sysupgrade -f "$BACKUP_TMP" "$TMP_FIRMWARE"
 else
-    echo "  命令: sysupgrade -n ${TMP_FIRMWARE}"
-    /sbin/sysupgrade -n "$TMP_FIRMWARE"
+    echo "  命令: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
+    /sbin/sysupgrade -f "$BACKUP_TMP" "$TMP_FIRMWARE"
 fi
 
 # 如果 sysupgrade 失败（返回了），清除记录避免误判
