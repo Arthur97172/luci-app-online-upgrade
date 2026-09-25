@@ -32,26 +32,38 @@ return view.extend({
 					resultEl.textContent = '✅ 发现新固件！';
 					resultEl.style.color = '';
 					var upgBtn = document.getElementById('btn-upgrade');
+					var upgBtnClean = document.getElementById('btn-upgrade-clean');
 					var forceBtn = document.getElementById('btn-force');
+					var forceBtnClean = document.getElementById('btn-force-clean');
 					if (upgBtn) upgBtn.style.display = 'inline-block';
+					if (upgBtnClean) upgBtnClean.style.display = 'inline-block';
 					if (forceBtn) forceBtn.style.display = 'none';
+					if (forceBtnClean) forceBtnClean.style.display = 'none';
 				} else if (text.indexOf('403') >= 0 || text.indexOf('60次') >= 0) {
 					resultEl.textContent = '❌ 检查失败 - 访问超60次/小时受限';
 					resultEl.style.color = '';
 					var forceBtn = document.getElementById('btn-force');
+					var forceBtnClean = document.getElementById('btn-force-clean');
 					if (forceBtn) forceBtn.style.display = 'inline-block';
+					if (forceBtnClean) forceBtnClean.style.display = 'inline-block';
 				} else if (text.indexOf('错误') >= 0) {
 					resultEl.textContent = '❌ 检查失败';
 					resultEl.style.color = '';
 					var forceBtn = document.getElementById('btn-force');
+					var forceBtnClean = document.getElementById('btn-force-clean');
 					if (forceBtn) forceBtn.style.display = 'inline-block';
+					if (forceBtnClean) forceBtnClean.style.display = 'inline-block';
 				} else {
 					resultEl.textContent = '✓ 已是最新';
 					resultEl.style.color = '#4CAF50';
 					var forceBtn = document.getElementById('btn-force');
+					var forceBtnClean = document.getElementById('btn-force-clean');
 					if (forceBtn) forceBtn.style.display = 'inline-block';
+					if (forceBtnClean) forceBtnClean.style.display = 'inline-block';
 					var upgBtn = document.getElementById('btn-upgrade');
+					var upgBtnClean = document.getElementById('btn-upgrade-clean');
 					if (upgBtn) upgBtn.style.display = 'none';
+					if (upgBtnClean) upgBtnClean.style.display = 'none';
 				}
 
 				// 解析并显示版本信息
@@ -117,7 +129,7 @@ return view.extend({
 			}, 1000);
 		}
 
-		function startUpgrade(isForce) {
+		function startUpgrade(isForce, keepConfig) {
 			if (isForce) {
 				var repo = (document.getElementById('cfg-repo')||{}).value.trim();
 				var tag = (document.getElementById('cfg-tag')||{}).value.trim();
@@ -126,9 +138,10 @@ return view.extend({
 					return;
 				}
 			}
+			var keepText = keepConfig ? '保留系统配置' : '不保留系统配置（仅保留本插件配置）';
 			var msg = isForce
-				? '确定强制更新固件？\n\n即使当前已是最新版本，也会重新下载并刷写。\n配置将自动备份并在刷写后恢复。\n请勿断电！'
-				: '确定执行在线固件升级？\n\n系统将自动备份配置 → 下载固件 → 刷写（自动恢复配置）→ 重启。\n请勿断电！';
+				? '确定强制更新固件？\n\n即使当前已是最新版本，也会重新下载并刷写。\n模式：' + keepText + '。\n请勿断电！'
+				: '确定执行在线固件升级？\n\n系统将自动备份配置 → 下载固件 → 刷写（' + keepText + '）→ 重启。\n请勿断电！';
 			if (!confirm(msg)) return;
 
 			var progArea = document.getElementById('progress-area');
@@ -161,7 +174,8 @@ return view.extend({
 				}
 			}, 2000);
 
-			fs.exec('/usr/bin/online-upgrade.sh', ['background']);
+			var keepArg = keepConfig ? 'keep' : 'clean';
+			fs.exec('/usr/bin/online-upgrade.sh', ['background', keepArg]);
 
 			// 升级流程是否已进入刷写阶段
 			var reachedSysupgrade = false;
@@ -226,8 +240,10 @@ return view.extend({
 			}, 3000);
 		}
 
-		function runUpgrade() { startUpgrade(false); }
-		function runForceUpgrade() { startUpgrade(true); }
+		function runUpgrade() { startUpgrade(false, true); }
+		function runForceUpgrade() { startUpgrade(true, true); }
+		function runUpgradeClean() { startUpgrade(false, false); }
+		function runForceUpgradeClean() { startUpgrade(true, false); }
 
 		function runBackup() {
 			updateOutput('正在创建配置备份...\n');
@@ -467,7 +483,12 @@ return view.extend({
 					E('button', {id: 'btn-upgrade', class: 'btn cbi-button-action important', style: 'display:none;background:#4CAF50;border-color:#4CAF50;', click: runUpgrade}, '立即升级'),
 					E('button', {id: 'btn-force', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;', click: runForceUpgrade}, '强制更新'),
 					E('span', {id: 'check-result', style: 'color:#888;font-size:12px;margin-left:4px;'}, '')
-					])
+					]),
+				E('div', {style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;'}, [
+					E('span', {style: 'color:#666;font-size:12px;margin-right:4px;'}, '保留系统配置:'),
+					E('button', {id: 'btn-upgrade-clean', class: 'btn cbi-button', style: 'display:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: runUpgradeClean}, '立即升级(干净)'),
+					E('button', {id: 'btn-force-clean', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: runForceUpgradeClean}, '强制更新(干净)')
+				])
 					]),
 
 					// 备份 & 恢复卡片

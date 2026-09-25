@@ -63,6 +63,7 @@ API_URL="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
 TMP_JSON="/tmp/release.json"
 
 MODE="${1:-check}"
+KEEP_MODE="${2:-keep}"
 
 echo "========================================"
 echo "  固件在线升级"
@@ -135,7 +136,8 @@ arch_hint() {
 
 # ===== 后台升级模式 =====
 if [ "$MODE" = "background" ] || [ "$MODE" = "--background" ] || [ "$MODE" = "--bg" ]; then
-    setsid /bin/sh "$0" "upgrade" </dev/null >/tmp/online-upgrade.log 2>&1 &
+    KEEP_PASS="${2:-keep}"
+    setsid /bin/sh "$0" "upgrade" "$KEEP_PASS" </dev/null >/tmp/online-upgrade.log 2>&1 &
     exit 0
 fi
 
@@ -452,21 +454,31 @@ echo "  已记录版本: v${FW_VERSION_RELEASE:-N/A} (${ASSET_UPDATED_LOCAL})"
 TS=$(date +%Y%m%d-%H%M%S)
 BACKUP_TMP="/tmp/pre-upgrade-backup-${TS}.tar.gz"
 BACKUP_ROOT="/root/pre-upgrade-backup-${TS}.tar.gz"
-echo ""
-echo "Step 3: 创建 sysupgrade 配置备份..."
-sysupgrade -b "$BACKUP_TMP"
-if [ $? -ne 0 ] || [ ! -s "$BACKUP_TMP" ]; then
-    echo "错误：配置备份失败！"
-    exit 1
+if [ "$KEEP_MODE" = "keep" ]; then
+    echo ""
+    echo "Step 3: 创建 sysupgrade 配置备份..."
+    sysupgrade -b "$BACKUP_TMP"
+    if [ $? -ne 0 ] || [ ! -s "$BACKUP_TMP" ]; then
+        echo "错误：配置备份失败！"
+        exit 1
+    fi
+    # 同时保存到 /root/ 作为应急副本
+    cp "$BACKUP_TMP" "$BACKUP_ROOT"
+    echo "  备份成功: ${BACKUP_ROOT} ($(du -h "$BACKUP_TMP" | cut -f1))"
+    echo "  备份中包含 $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) 个文件"
+else
+    echo ""
+    echo "Step 3: 跳过完整配置备份（干净升级模式）"
+    BACKUP_TMP=""
 fi
-# 同时保存到 /root/ 作为应急副本
-cp "$BACKUP_TMP" "$BACKUP_ROOT"
-echo "  备份成功: ${BACKUP_ROOT} ($(du -h "$BACKUP_TMP" | cut -f1))"
-echo "  备份中包含 $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) 个文件"
 
-# ---- Step 4: 执行 sysupgrade（带 -f 参数自动恢复配置）----
+# ---- Step 4: 执行 sysupgrade
 echo ""
-echo "Step 4: 执行 sysupgrade（自动恢复配置）..."
+if [ "$KEEP_MODE" = "keep" ]; then
+    echo "Step 4: 执行 sysupgrade（自动恢复配置）..."
+else
+    echo "Step 4: 执行 sysupgrade（不恢复配置，干净升级）..."
+fi
 echo "sysupgrade" > /tmp/online-upgrade-status
 sync
 sleep 1
@@ -476,8 +488,13 @@ echo "  正在保存已安装包列表..."
 apk info 2>/dev/null > /root/.pkg-list.txt
 sync
 
-echo "  命令: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
-/sbin/sysupgrade -f "$BACKUP_TMP" "$TMP_FIRMWARE"
+if [ "$KEEP_MODE" = "keep" ]; then
+    echo "  命令: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
+    /sbin/sysupgrade -f "$BACKUP_TMP" "$TMP_FIRMWARE"
+else
+    echo "  命令: sysupgrade ${TMP_FIRMWARE}"
+    /sbin/sysupgrade "$TMP_FIRMWARE"
+fi
 
 # 如果 sysupgrade 失败（返回了），清除记录避免误判
 echo "错误：sysupgrade 执行失败！" >> /tmp/online-upgrade.log
