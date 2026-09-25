@@ -517,10 +517,10 @@ return view.extend({
 						E('div', {style: 'flex:1;min-width:200px;display:flex;align-items:center;gap:6px;'}, [
 							E('input', {id: 'cfg-url', type: 'text', style: 'flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: 'https://github.com/owner/repo/releases/tag/tag'}),
 							E('button', {class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;', click: parseUrl}, '解析'),
-							E('span', {style: 'font-size:12px;color:#888;'}, '自动解析仓库和标签')
+	
 						])
 					]),
-					E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, "提示：在开始检查更新之前，请先在'Release 地址'栏内填入固件的 tag 链接，然后点击'解析'按钮，再点击'保存配置'。"),
+
 					E('div', {style: 'margin-top:4px;margin-bottom:4px;'}, [
 						E('div', {style: 'cursor:pointer;font-size:13px;color:#5e72e4;user-select:none;display:inline-flex;align-items:center;gap:4px;padding:4px 0;', click: toggleAdv}, [
 							E('span', {id: 'adv-arrow'}, '▶'),
@@ -549,7 +549,8 @@ return view.extend({
 						])
 					])
 				]),
-				E('div', {style: 'margin-top:14px;text-align:right;'}, [
+									E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, "提示：在点击'检查更新'前，请先在'Release 地址'栏内填入固件 tag 链接，然后再依次点击'解析'与'保存配置'。"),
+E('div', {style: 'margin-top:14px;text-align:right;'}, [
 					E('button', {class: 'btn cbi-button-save', style: 'padding:7px 20px;border-radius:4px;cursor:pointer;', click: saveCfg}, '保存配置')
 				])
 			]),
