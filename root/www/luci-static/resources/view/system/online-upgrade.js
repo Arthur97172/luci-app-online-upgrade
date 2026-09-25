@@ -121,10 +121,8 @@ return view.extend({
 			if (isForce) {
 				var repo = (document.getElementById('cfg-repo')||{}).value.trim();
 				var tag = (document.getElementById('cfg-tag')||{}).value.trim();
-				var url = (document.getElementById('cfg-url')||{}).value.trim();
-				var isPlaceholder = repo==='owner/repo' && tag==='tag' && url==='https://github.com/owner/repo/releases/tag/tag';
-				if (isPlaceholder) {
-					alert('请先配置正确的 Release 地址！\n\n当前仍为默认占位符：\nhttps://github.com/owner/repo/releases/tag/tag\n\n请在“仓库配置”中填写真实的 GitHub 仓库和标签后再执行强制更新。');
+				if (!repo || !tag) {
+					alert('请先在“仓库配置”中填写 GitHub 仓库和 Release 标签后再执行强制更新。');
 					return;
 				}
 			}
@@ -492,7 +490,7 @@ return view.extend({
 					E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 						E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, 'Release 地址'),
 						E('div', {style: 'flex:1;min-width:200px;display:flex;align-items:center;gap:6px;'}, [
-							E('input', {id: 'cfg-url', type: 'text', style: 'flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', value: 'https://github.com/owner/repo/releases/tag/tag'}),
+							E('input', {id: 'cfg-url', type: 'text', style: 'flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: 'https://github.com/owner/repo/releases/tag/tag'}),
 							E('button', {class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;', click: parseUrl}, '解析'),
 							E('span', {style: 'font-size:12px;color:#888;'}, '自动解析仓库和标签')
 						])
@@ -506,11 +504,11 @@ return view.extend({
 					E('div', {id: 'adv-body', style: 'display:none;'}, [
 						E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 							E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, 'GitHub 仓库'),
-							E('input', {id: 'cfg-repo', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', value: 'owner/repo', readonly: 'readonly'})
+							E('input', {id: 'cfg-repo', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', placeholder: 'owner/repo', readonly: 'readonly'})
 						]),
 						E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 							E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, 'Release 标签'),
-							E('input', {id: 'cfg-tag', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', value: 'tag', readonly: 'readonly'})
+							E('input', {id: 'cfg-tag', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);color:#888;', placeholder: 'tag', readonly: 'readonly'})
 						]),
 						E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 							E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, '固件匹配'),

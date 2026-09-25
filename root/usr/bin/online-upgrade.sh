@@ -48,11 +48,10 @@ DISTRO="$(detect_distro)"
 ARCH="$(detect_arch)"
 
 # 发行版相关默认仓库/标签（仅当用户未配置时使用）
-#  ImmortalWrt：使用官方构建源（默认）
-#  OpenWrt：无统一在线发布源，需用户自行配置仓库与标签
+#  ImmortalWrt / OpenWrt：均需用户显式配置仓库与标签，无内置默认源
 if [ "$DISTRO" = "immortalwrt" ]; then
-    [ -z "$REPO" ] && REPO="owner/repo"
-    [ -z "$TAG" ] && TAG="tag"
+    [ -z "$REPO" ] && REPO=""
+    [ -z "$TAG" ] && TAG=""
 else
     [ -z "$REPO" ] && REPO=""
     [ -z "$TAG" ] && TAG=""
