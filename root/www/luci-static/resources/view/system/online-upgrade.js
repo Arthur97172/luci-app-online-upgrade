@@ -118,6 +118,16 @@ return view.extend({
 		}
 
 		function startUpgrade(isForce) {
+			if (isForce) {
+				var repo = (document.getElementById('cfg-repo')||{}).value.trim();
+				var tag = (document.getElementById('cfg-tag')||{}).value.trim();
+				var url = (document.getElementById('cfg-url')||{}).value.trim();
+				var isPlaceholder = repo==='owner/repo' && tag==='tag' && url==='https://github.com/owner/repo/releases/tag/tag';
+				if (isPlaceholder) {
+					alert('请先配置正确的 Release 地址！\n\n当前仍为默认占位符：\nhttps://github.com/owner/repo/releases/tag/tag\n\n请在“仓库配置”中填写真实的 GitHub 仓库和标签后再执行强制更新。');
+					return;
+				}
+			}
 			var msg = isForce
 				? '确定强制更新固件？\n\n即使当前已是最新版本，也会重新下载并刷写。\n配置将自动备份并在刷写后恢复。\n请勿断电！'
 				: '确定执行在线固件升级？\n\n系统将自动备份配置 → 下载固件 → 刷写（自动恢复配置）→ 重启。\n请勿断电！';
