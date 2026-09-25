@@ -520,6 +520,7 @@ return view.extend({
 							E('span', {style: 'font-size:12px;color:#888;'}, '自动解析仓库和标签')
 						])
 					]),
+					E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, "提示：在开始检查更新之前，请先在'Release 地址'栏内填入固件的 tag 链接，然后点击'解析'按钮，再点击'保存配置'。"),
 					E('div', {style: 'margin-top:4px;margin-bottom:4px;'}, [
 						E('div', {style: 'cursor:pointer;font-size:13px;color:#5e72e4;user-select:none;display:inline-flex;align-items:center;gap:4px;padding:4px 0;', click: toggleAdv}, [
 							E('span', {id: 'adv-arrow'}, '▶'),
