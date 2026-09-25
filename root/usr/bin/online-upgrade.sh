@@ -492,8 +492,8 @@ if [ "$KEEP_MODE" = "keep" ]; then
     echo "  命令: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
     /sbin/sysupgrade -f "$BACKUP_TMP" "$TMP_FIRMWARE"
 else
-    echo "  命令: sysupgrade ${TMP_FIRMWARE}"
-    /sbin/sysupgrade "$TMP_FIRMWARE"
+    echo "  命令: sysupgrade -n ${TMP_FIRMWARE}"
+    /sbin/sysupgrade -n "$TMP_FIRMWARE"
 fi
 
 # 如果 sysupgrade 失败（返回了），清除记录避免误判

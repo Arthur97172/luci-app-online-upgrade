@@ -138,7 +138,7 @@ return view.extend({
 					return;
 				}
 			}
-			var keepText = keepConfig ? '保留系统配置' : '不保留系统配置（仅保留本插件配置）';
+			var keepText = keepConfig ? '保留系统配置' : '不保留任何配置（含本插件，升级后需重装插件）';
 			var msg = isForce
 				? '确定强制更新固件？\n\n即使当前已是最新版本，也会重新下载并刷写。\n模式：' + keepText + '。\n请勿断电！'
 				: '确定执行在线固件升级？\n\n系统将自动备份配置 → 下载固件 → 刷写（' + keepText + '）→ 重启。\n请勿断电！';
