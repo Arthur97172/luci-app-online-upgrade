@@ -8,104 +8,131 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: ipk
+            sdk_url: https://downloads.openwrt.org/releases/24.10.8/targets/x86/64/openwrt-sdk-24.10.8-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+            pkg_ext: ipk
+          - artifact: apk
+            sdk_url: https://downloads.openwrt.org/releases/25.12.5/targets/x86/64/openwrt-sdk-25.12.5-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst
+            pkg_ext: apk
 
     steps:
-      # ---------- 1. 检出源码 ----------
       - name: Checkout source
         uses: actions/checkout@v4
+
+      - name: Download SDK
+        run: |
+          curl -sL --retry 5 --retry-delay 10 "${{ matrix.sdk_url }}" -o sdk.tar.zst
+
+      - name: Extract SDK
+        run: |
+          tar -xf sdk.tar.zst
+          mv openwrt-sdk-* sdk
+
+      - name: Copy package to SDK
+        run: |
+          rm -rf sdk/package/luci-app-online-upgrade
+          mkdir -p sdk/package/luci-app-online-upgrade
+          # 复制当前仓库所有内容到 SDK 包目录
+          rsync -a --exclude='.git' --exclude='.github' ./ sdk/package/luci-app-online-upgrade/
+
+      - name: Install feeds
+        run: |
+          cd sdk
+          sed -e 's/^src-git-full /src-git /' feeds.conf.default > feeds.conf
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          make defconfig
+
+      - name: Build package
+        run: |
+          cd sdk
+          make -j"$(nproc)" package/luci-app-online-upgrade/compile V=s
+
+      - name: Collect artifact
+        run: |
+          mkdir -p artifacts
+          find sdk/bin/packages -name "luci-app-online-upgrade*.${{ matrix.pkg_ext }}" -exec cp {} artifacts/ \;
+          find sdk/bin/targets -name "*${{ matrix.pkg_ext }}" -exec cp {} artifacts/ \; 2>/dev/null || true
+          ls -lh artifacts/ 2>/dev/null || echo "(no ${{ matrix.pkg_ext }})"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: package-dir
+          name: ${{ matrix.artifact }}
+          path: artifacts/
+          if-no-files-found: ignore
 
-      # ---------- 2. 并行下载两个 SDK ----------
-      - name: Download SDKs (parallel)
-        run: |
-          SDK23_URL="https://downloads.immortalwrt.org/releases/23.05.4/targets/x86/64/immortalwrt-sdk-23.05.4-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz"
-          SDK25_URL="https://downloads.immortalwrt.org/releases/25.12.0/targets/x86/64/immortalwrt-sdk-25.12.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-          # 并行下载
-          curl -sL --retry 5 --retry-delay 10 "$SDK23_URL" -o sdk23.tar.xz &
-          curl -sL --retry 5 --retry-delay 10 "$SDK25_URL" -o sdk25.tar.zst &
-          wait
-          echo "✅ SDKs downloaded"
-      - name: Extract SDKs
-        run: |
-          # 串行解压（避免移动时的竞态）
-          tar -xf sdk23.tar.xz && mv immortalwrt-sdk-* sdk23
-          tar --zstd -xf sdk25.tar.zst && mv immortalwrt-sdk-* sdk25
-          echo "✅ SDKs extracted"
+  release:
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
 
-      # ============================================================
-      # 编译 .ipk (opkg) - SDK 23.05
-      # ============================================================
-      - name: Copy package to SDK 23.05
-        run: |
-          mkdir -p sdk23/package/luci-app-online-upgrade
-          cp -r package-dir/* sdk23/package/luci-app-online-upgrade/
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Install feeds (SDK 23.05)
+      - name: Read version from Makefile
+        id: version
         run: |
-          cd sdk23
-          ./scripts/feeds update luci --depth 1
-          ./scripts/feeds install -a
-          make defconfig
+          VER=$(sed -n 's/^PKG_VERSION:=//p' Makefile | tr -d '[:space:]')
+          REL=$(sed -n 's/^PKG_RELEASE:=//p' Makefile | tr -d '[:space:]')
+          PKGVER="${VER}-r${REL}"
+          echo "PKGVER=${PKGVER}" >> "$GITHUB_OUTPUT"
+          echo "包版本：${PKGVER}"
 
-      - name: Build .ipk
-        id: build_ipk
-        run: |
-          cd sdk23
-          make -j$(nproc) package/luci-app-online-upgrade/compile V=s
+      - name: Download ipk artifact
+        uses: actions/download-artifact@v4
         continue-on-error: true
+        with:
+          name: ipk
+          path: artifacts
 
-      - name: Save .ipk
-        run: |
-          mkdir -p /tmp/pkgs
-          find sdk23/bin/ -name "luci-app-online-upgrade*.ipk" -exec cp {} /tmp/pkgs/ \;
-          echo "=== .ipk artifacts ==="
-          ls -lh /tmp/pkgs/*.ipk 2>/dev/null || echo "(no .ipk)"
-
-      # ============================================================
-      # 编译 .apk (APK) - SDK 25.12
-      # ============================================================
-      - name: Copy package to SDK 25.12
-        run: |
-          mkdir -p sdk25/package/luci-app-online-upgrade
-          cp -r package-dir/* sdk25/package/luci-app-online-upgrade/
-
-      - name: Install feeds (SDK 25.12)
-        run: |
-          cd sdk25
-          ./scripts/feeds update luci --depth 1
-          ./scripts/feeds install -a
-          make defconfig
-
-      - name: Build .apk
-        id: build_apk
-        run: |
-          cd sdk25
-          make -j$(nproc) package/luci-app-online-upgrade/compile V=s
+      - name: Download apk artifact
+        uses: actions/download-artifact@v4
         continue-on-error: true
+        with:
+          name: apk
+          path: artifacts
 
-      - name: Save .apk
+      - name: Verify artifacts
         run: |
-          find sdk25/bin/ -name "luci-app-online-upgrade*.apk" -exec cp {} /tmp/pkgs/ \;
-          echo "=== All artifacts ==="
-          ls -lh /tmp/pkgs/
+          mkdir -p artifacts
+          if ! ls artifacts/* 1>/dev/null 2>&1; then
+            echo "没有编译产物，终止构建"
+            exit 1
+          fi
+          ls -lh artifacts/
 
-      # ============================================================
-      # 上传到 Release
-      # ============================================================
+      - name: Delete existing release/tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PKGVER="${{ steps.version.outputs.PKGVER }}"
+          gh release delete "$PKGVER" -y --cleanup-tag 2>/dev/null || true
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$PKGVER" 2>/dev/null || true
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: v1.0.${{ github.run_number }}
+          tag_name: ${{ steps.version.outputs.PKGVER }}
+          name: ${{ steps.version.outputs.PKGVER }}
           body: |
-            自动编译的插件包
+            自动编译的插件包（版本 ${{ steps.version.outputs.PKGVER }}）
 
-            - ✅ .ipk (opkg) — 适用于 ImmortalWrt 23.05 及更早
-            - ✅ .apk (APK) — 适用于 ImmortalWrt 25.12+
-          files: /tmp/pkgs/*
+            - `.ipk`（opkg）— OpenWrt 24.10 及更早
+            - `.apk`（apk）— OpenWrt 25.12+
+            - 架构 `all`：纯 Lua 包，同一份产物同时支持 ARM / x86 / MIPS 等所有平台
+          files: artifacts/*
           token: ${{ github.token }}
           make_latest: true
