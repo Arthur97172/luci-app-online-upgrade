@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          path: package-dir
 
       - name: Download SDK
         run: |
@@ -41,10 +43,8 @@ jobs:
 
       - name: Copy package to SDK
         run: |
-          rm -rf sdk/package/luci-app-online-upgrade
           mkdir -p sdk/package/luci-app-online-upgrade
-          # 复制当前仓库所有内容到 SDK 包目录
-          rsync -a --exclude='.git' --exclude='.github' ./ sdk/package/luci-app-online-upgrade/
+          cp -r package-dir/* sdk/package/luci-app-online-upgrade/
 
       - name: Install feeds
         run: |
