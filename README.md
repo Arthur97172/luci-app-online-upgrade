@@ -8,7 +8,7 @@ ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 
 - 支持自定义 GitHub 仓库、Release 标签
 - 自动检测固件更新
-- 一键在线升级，保留系统配置
+- 一键在线升级，保留系统配置，也支持干净更新，不保留系统配置但保留online-upgrade插件
 - 支持 GitHub 下载加速代理
 - 升级前自动备份配置到 boot 分区
 - 强制更新：即使已是最新版本也可重新刷写
