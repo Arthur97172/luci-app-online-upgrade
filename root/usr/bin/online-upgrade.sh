@@ -335,7 +335,7 @@ fi
 # 直链模式默认值补全
 if [ "$SKIP_GITHUB" = "1" ]; then
     [ -z "$ASSET_UPDATED_LOCAL" ] && ASSET_UPDATED_LOCAL="$(date +"%Y-%m-%d %H:%M:%S")"
-    [ -z "$ASSET_SIZE" ] && ASSET_SIZE="信息无法获取"
+    [ -z "$ASSET_SIZE" ] && ASSET_SIZE="未知,信息无法获取"
     # 确保 DOWNLOAD_URL 已设为 FULL_URL 用于后续下载
     :
 fi
@@ -426,7 +426,7 @@ echo "  新固件版本: v${FW_VERSION_RELEASE:-N/A}"
 echo "  最新固件: ${FILE_NAME}"
 # ASSET_SIZE 在直链模式下为 "未知"（非数字），直接做算术会报 arithmetic syntax error
 case "$ASSET_SIZE" in
-    ''|*[!0-9]*) SIZE_DISPLAY="${ASSET_SIZE:-信息无法获取}" ;;
+    ''|*[!0-9]*) SIZE_DISPLAY="${ASSET_SIZE:-未知,信息无法获取}" ;;
     *)           SIZE_DISPLAY="$(printf "%.0f MB" $((ASSET_SIZE / 1024 / 1024)))" ;;
 esac
 echo "  文件大小: ${SIZE_DISPLAY}"
