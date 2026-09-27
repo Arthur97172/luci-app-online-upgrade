@@ -135,7 +135,7 @@ return view.extend({
 				var tag = (document.getElementById('cfg-tag')||{}).value.trim();
 				var direct = (document.getElementById('cfg-direct-url')||{}).value.trim();
 				if (!direct && (!repo || !tag)) {
-					alert('请先填写固件直链，或解析 GitHub Release 地址后再执行强制更新。');
+					alert('请先填写固件镜像下载地址，或解析 GitHub Release Tag 地址后再执行强制更新。');
 					return;
 				}
 			}
@@ -507,13 +507,13 @@ return view.extend({
 				E('div', {style: 'font-size:16px;font-weight:600;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee;'}, '仓库配置'),
 				E('div', {style: 'display:flex;flex-direction:column;gap:10px;'}, [
 					E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
-						E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, '固件直链'),
+						E('label', {style: 'min-width:160px;font-size:13px;color:#555;font-weight:500;'}, '固件镜像下载地址'),
 						E('div', {style: 'flex:1;min-width:200px;'}, [
 							E('input', {id: 'cfg-direct-url', type: 'text', style: 'width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: 'https://example.com/firmware.img.gz'})
 						])
 					]),
 					E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
-						E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, 'Release 地址'),
+						E('label', {style: 'min-width:160px;font-size:13px;color:#555;font-weight:500;'}, 'GitHub Release Tag 地址'),
 						E('div', {style: 'flex:1;min-width:200px;display:flex;align-items:center;gap:6px;'}, [
 							E('input', {id: 'cfg-url', type: 'text', style: 'flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: 'https://github.com/owner/repo/releases/tag/tag'}),
 							E('button', {class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;', click: parseUrl}, '解析')
@@ -521,13 +521,13 @@ return view.extend({
 					]),
 
 					E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
-						E('label', {style: 'min-width:100px;font-size:13px;color:#555;font-weight:500;'}, '下载代理(可选)'),
+						E('label', {style: 'min-width:160px;font-size:13px;color:#555;font-weight:500;'}, '下载代理(可选)'),
 						E('input', {id: 'cfg-proxy', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: 'https://ghfast.top/'})
 					]),
 					E('input', {id: 'cfg-repo', type: 'hidden'}),
 					E('input', {id: 'cfg-tag', type: 'hidden'})
 				]),
-				E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, "提示：固件直链优先于 GitHub Release 地址；直链模式下不检测版本，请使用'强制更新'直接刷写。Release 地址需点击'解析'，两者配置完成后点'保存配置'生效。"),
+				E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, "提示：固件镜像下载地址优先于 GitHub Release Tag 地址；直链模式下不检测版本，请使用'强制更新'直接刷写。GitHub Release Tag 地址需点击'解析'，两者配置完成后点'保存配置'生效。"),
 				E('div', {style: 'margin-top:14px;text-align:right;'}, [
 					E('button', {class: 'btn cbi-button-save', style: 'padding:7px 20px;border-radius:4px;cursor:pointer;', click: saveCfg}, '保存配置')
 				])

@@ -94,7 +94,7 @@ if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
     echo "  系统: ${DISTRO}  |  架构: ${ARCH}"
 else
     if [ "$SKIP_GITHUB" = "1" ]; then
-        echo "  架构: ${ARCH}  |  直链: ${DOWNLOAD_URL}"
+        echo "  架构: ${ARCH}  |  固件镜像下载地址: ${DOWNLOAD_URL}"
     else
         echo "  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
     fi
@@ -203,14 +203,14 @@ elif [ -z "$REPO" ] || [ -z "$TAG" ]; then
     echo "      uci set online-upgrade.settings.repo='owner/repo'"
     echo "      uci set online-upgrade.settings.tag='your-release-tag'"
     echo "      uci commit online-upgrade"
-    echo "      或在 LuCI 页面粘贴 Release 地址后点击“解析”"
+    echo "      或在 LuCI 页面粘贴 GitHub Release Tag 地址后点击“解析”"
     exit 1
 fi
 
 # ===== 获取 Release 信息 =====
 if [ "$SKIP_GITHUB" = "1" ]; then
     echo ""
-    echo "[1/2] 直链模式，跳过 Release 获取"
+    echo "[1/2] 固件镜像下载地址模式，跳过 Release 获取"
 else
     echo ""
     echo "[1/2] 正在获取 Release 信息..."

@@ -6,7 +6,7 @@ ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 
 ## 功能
 
-- **双模式固件源**：支持 GitHub Release 地址自动解析，也支持直接输入固件直链地址，优先级以直链为准
+- **双模式固件源**：支持 GitHub Release Tag 地址自动解析，也支持直接输入固件镜像下载地址，优先级以固件镜像下载地址为准
 - **智能检测与升级**：自动检测固件更新，一键在线升级；支持保留系统配置升级，也支持干净升级，仅保留本插件
 - **下载加速**：支持 GitHub 下载加速代理，可自定义代理地址，提升下载速度和稳定性
 - **安全备份**：升级前自动备份配置到 `/root/pre-upgrade-backup-*.tar.gz`，刷写后自动恢复；同时提供手动备份、下载、恢复、删除功能
@@ -20,8 +20,8 @@ ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 
 1. 安装后，在 LuCI 菜单 **系统 → 在线升级** 进入
 2. **固件源配置**：任选其一
-   - 填入 GitHub Release 地址，点击 **解析** 自动获取仓库和标签
-   - 或直接填入固件直链地址，优先级高于 Release 地址
+   - 填入 GitHub Release Tag 地址，点击 **解析** 自动获取仓库和标签
+   - 或直接填入固件镜像下载地址，优先级高于 GitHub Release Tag 地址
    - 可选填入下载代理以加速 GitHub 下载
 3. 点击 **保存配置**
 4. 点击 **检查更新** 查看最新固件
@@ -45,7 +45,7 @@ opkg install luci-app-online-upgrade_1.1.0_all.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.0-r1.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.0-r2.apk
 ```
 
 ## 依赖

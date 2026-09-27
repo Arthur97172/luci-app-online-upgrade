@@ -9,7 +9,7 @@ repo.rmempty = false
 local tag = s:option(Value, "tag", "Release 标签")
 tag.rmempty = false
 
-local direct_url = s:option(Value, "direct_url", "固件直链")
+local direct_url = s:option(Value, "direct_url", "固件镜像下载地址")
 direct_url.rmempty = true
 
 local pattern = s:option(Value, "firmware_pattern", "固件匹配模式",

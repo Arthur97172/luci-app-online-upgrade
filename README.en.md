@@ -6,7 +6,7 @@ ImmortalWrt / OpenWrt LuCI plugin - Online firmware upgrade from GitHub Releases
 
 ## Features
 
-- **Dual firmware source modes**: Supports GitHub Release URL auto-parsing and direct firmware URL input, with direct URL taking priority
+- **Dual firmware source modes**: Supports GitHub Release Tag URL auto-parsing and direct firmware image download URL input, with the firmware image download URL taking priority
 - **Smart detection & upgrade**: Automatically detects firmware updates, one-click online upgrade; supports keep-config upgrade and clean upgrade keeping only this plugin
 - **Download acceleration**: Supports GitHub download acceleration proxy, customizable proxy address for faster and more stable downloads
 - **Safe backup**: Automatically backs up configuration to `/root/pre-upgrade-backup-*.tar.gz` before upgrade and restores after flashing; manual backup, download, restore and delete functions provided
@@ -20,8 +20,8 @@ ImmortalWrt / OpenWrt LuCI plugin - Online firmware upgrade from GitHub Releases
 
 1. After installation, open **System → Online Upgrade** in LuCI
 2. **Firmware source config**: Choose one
-   - Paste GitHub Release URL and click **Parse** to auto-fill repo and tag
-   - Or input direct firmware URL directly, which takes priority over Release URL
+   - Paste GitHub Release Tag URL and click **Parse** to auto-fill repo and tag
+   - Or input the firmware image download URL directly, which takes priority over the GitHub Release Tag URL
    - Optionally set download proxy to accelerate GitHub downloads
 3. Click **Save Configuration**
 4. Click **Check Update** to view latest firmware
@@ -45,7 +45,7 @@ opkg install luci-app-online-upgrade_1.1.0_all.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.0-r1.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.0-r2.apk
 ```
 
 ## Dependencies
