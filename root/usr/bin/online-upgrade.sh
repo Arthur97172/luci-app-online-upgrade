@@ -17,6 +17,7 @@ CONFIG_FILE="/etc/config/online-upgrade"
 get_uci() { uci -q get "online-upgrade.settings.$1" 2>/dev/null; }
 REPO="$(get_uci repo)"
 TAG="$(get_uci tag)"
+DIRECT_URL="$(get_uci direct_url)"
 PROXY="$(get_uci proxy)"
 FW_PATTERN="$(get_uci firmware_pattern)"
 KEEP_CONFIG="$(get_uci keep_config)"
@@ -59,6 +60,28 @@ fi
 [ -z "$PROXY" ] && PROXY="https://ghfast.top/"
 [ -z "$FW_PATTERN" ] && FW_PATTERN="auto"
 
+# 直链模式：优先级高于 GitHub repo/tag
+SKIP_GITHUB=0
+if [ -n "$DIRECT_URL" ]; then
+    SKIP_GITHUB=1
+    DOWNLOAD_URL="$DIRECT_URL"
+    # 去掉查询参数取文件名
+    FILE_NAME="$(basename "${DOWNLOAD_URL%%\?*}")"
+    # 绝对 URL 不自动拼接代理；相对路径才拼接
+    case "$DOWNLOAD_URL" in
+        http://*|https://*)
+            FULL_URL="$DOWNLOAD_URL"
+            ;;
+        *)
+            FULL_URL="${PROXY}${DOWNLOAD_URL}"
+            ;;
+    esac
+    # 直链模式下版本信息为空，check 直接提示
+    ASSET_UPDATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    ASSET_SIZE=""
+    FW_VERSION_RELEASE=""
+fi
+
 API_URL="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
 TMP_JSON="/tmp/release.json"
 
@@ -70,7 +93,11 @@ echo "  固件在线升级"
 if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
     echo "  系统: ${DISTRO}  |  架构: ${ARCH}"
 else
-    echo "  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
+    if [ "$SKIP_GITHUB" = "1" ]; then
+        echo "  架构: ${ARCH}  |  直链: ${DOWNLOAD_URL}"
+    else
+        echo "  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
+    fi
 fi
 echo "========================================"
 
@@ -166,7 +193,10 @@ if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
 fi
 
 # ===== 校验仓库配置 =====
-if [ -z "$REPO" ] || [ -z "$TAG" ]; then
+if [ "$SKIP_GITHUB" = "1" ]; then
+    # 直链模式，跳过仓库校验
+    :
+elif [ -z "$REPO" ] || [ -z "$TAG" ]; then
     echo ""
     echo "错误：未配置 GitHub 仓库 / 标签。"
     echo "当前系统为 ${DISTRO}，未使用默认发布源，请先配置："
@@ -178,8 +208,13 @@ if [ -z "$REPO" ] || [ -z "$TAG" ]; then
 fi
 
 # ===== 获取 Release 信息 =====
-echo ""
-echo "[1/2] 正在获取 Release 信息..."
+if [ "$SKIP_GITHUB" = "1" ]; then
+    echo ""
+    echo "[1/2] 直链模式，跳过 Release 获取"
+else
+    echo ""
+    echo "[1/2] 正在获取 Release 信息..."
+fi
 GITHUB_TOKEN="$(uci -q get online-upgrade.settings.github_token 2>/dev/null)"
 if [ -n "$GITHUB_TOKEN" ]; then
     HTTP_CODE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
@@ -222,6 +257,7 @@ elif [ "$HTTP_CODE" != "200" ]; then
 fi
 
 # ===== 查找固件 =====
+if [ "$SKIP_GITHUB" != "1" ]; then
 # 兼容多种固件格式：*.img.gz / *.img / *.itb（ARM64 等）/ *.bin（部分厂商）
 echo ""
 echo "[2/2] 正在查找最新固件..."
@@ -290,6 +326,15 @@ if [ -z "$DOWNLOAD_URL" ]; then
     echo "提示：固件文件名为 \"${FILE_NAME}\"，请确认该 Release 确实包含此文件"
     rm -f "$TMP_JSON"
     exit 1
+fi
+fi
+
+# 直链模式默认值补全
+if [ "$SKIP_GITHUB" = "1" ]; then
+    [ -z "$ASSET_UPDATED_LOCAL" ] && ASSET_UPDATED_LOCAL="$(date +"%Y-%m-%d %H:%M:%S")"
+    [ -z "$ASSET_SIZE" ] && ASSET_SIZE="未知"
+    # 确保 DOWNLOAD_URL 已设为 FULL_URL 用于后续下载
+    :
 fi
 
 # 提取版本号（从固件文件名）

@@ -9,6 +9,9 @@ repo.rmempty = false
 local tag = s:option(Value, "tag", "Release 标签")
 tag.rmempty = false
 
+local direct_url = s:option(Value, "direct_url", "固件直链")
+direct_url.rmempty = true
+
 local pattern = s:option(Value, "firmware_pattern", "固件匹配模式",
     "留空或填 auto 自动匹配（兼容 .img.gz / .img / .itb / .bin）；也可填正则自定义匹配")
 pattern.default = "auto"
