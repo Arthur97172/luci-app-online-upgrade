@@ -215,6 +215,8 @@ else
     echo ""
     echo "[1/2] 正在获取 Release 信息..."
 fi
+# 固件镜像下载地址模式跳过 GitHub API 请求，避免 repo/tag 为空导致 404
+if [ "$SKIP_GITHUB" != "1" ]; then
 GITHUB_TOKEN="$(uci -q get online-upgrade.settings.github_token 2>/dev/null)"
 if [ -n "$GITHUB_TOKEN" ]; then
     HTTP_CODE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
@@ -254,6 +256,7 @@ elif [ "$HTTP_CODE" != "200" ]; then
     echo "错误：GitHub API 返回 HTTP $HTTP_CODE"
     rm -f "$TMP_JSON"
     exit 1
+fi
 fi
 
 # ===== 查找固件 =====
@@ -421,7 +424,12 @@ echo "============================================"
 echo "  当前固件: ${CURRENT_ID} ${CURRENT_RELEASE} (r${CURRENT_REVISION})"
 echo "  新固件版本: v${FW_VERSION_RELEASE:-N/A}"
 echo "  最新固件: ${FILE_NAME}"
-echo "  文件大小: $(printf "%.0f MB" $((${ASSET_SIZE:-0} / 1024 / 1024)) 2>/dev/null)"
+# ASSET_SIZE 在直链模式下为 "未知"（非数字），直接做算术会报 arithmetic syntax error
+case "$ASSET_SIZE" in
+    ''|*[!0-9]*) SIZE_DISPLAY="${ASSET_SIZE:-未知}" ;;
+    *)           SIZE_DISPLAY="$(printf "%.0f MB" $((ASSET_SIZE / 1024 / 1024)))" ;;
+esac
+echo "  文件大小: ${SIZE_DISPLAY}"
 echo "  编译时间: ${ASSET_UPDATED_LOCAL}"
 echo "  检测依据: ${UPDATE_REASON}"
 echo "============================================"
