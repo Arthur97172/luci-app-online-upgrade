@@ -1,5 +1,7 @@
 # luci-app-online-upgrade
 
+**中文** | [English](README.en.md)
+
 ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 
 ![Screenshot](screenshot.png)

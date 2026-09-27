@@ -1,5 +1,7 @@
 # luci-app-online-upgrade
 
+[中文](README.md) | **English**
+
 ImmortalWrt / OpenWrt LuCI plugin - Online firmware upgrade from GitHub Releases.
 
 ![Screenshot](screenshot.png)
