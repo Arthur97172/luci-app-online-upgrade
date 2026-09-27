@@ -47,7 +47,7 @@ opkg install luci-app-online-upgrade_1.1.1_all.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r1.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r2.apk
 ```
 
 ## Dependencies

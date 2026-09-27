@@ -126,15 +126,26 @@ return view.extend({
 				if (countdownEl) countdownEl.textContent = String(seconds);
 				if (seconds <= 0) {
 					clearInterval(timer);
-					// 倒计时结束后改为探测式等待：每 5 秒尝试连接，路由器上线后再刷新
+					// 倒计时结束后改为探测式等待：每 5 秒探测 LuCI 登录页（无需鉴权，
+					// 重启后 session 失效时当前页面会返回 403，不能拿它当探针）
 					if (countdownEl) countdownEl.textContent = '...';
+					var probeFails = 0;
 					var probe = setInterval(function() {
-						fetch(window.location.href, {cache: 'no-store', method: 'HEAD'}).then(function(resp) {
+						fetch('/cgi-bin/luci/', {cache: 'no-store', method: 'HEAD'}).then(function(resp) {
 							if (resp.ok) {
 								clearInterval(probe);
 								window.location.reload();
+							} else {
+								probeFails++;
 							}
-						}).catch(function() {});
+						}).catch(function() { probeFails++; });
+						// 兜底：连续 3 次（约 15 秒）探测失败，提示手动检查
+						if (probeFails >= 3) {
+							clearInterval(probe);
+							if (countdownEl) countdownEl.textContent = '!';
+							var tip = overlay.querySelector('div:nth-child(2)');
+							if (tip) tip.textContent = '路由器可能尚未启动或 IP 已变更，请手动刷新或检查路由器状态。';
+						}
 					}, 5000);
 				}
 			}, 1000);
