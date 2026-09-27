@@ -131,6 +131,16 @@ return view.extend({
 			}, 1000);
 		}
 
+		// 更新进度条（假进度条与真实状态驱动共用）
+		function updateProgress(p, t) {
+			var bar = document.getElementById('progress-bar');
+			var label = document.getElementById('progress-label');
+			var text = document.getElementById('progress-text');
+			if (bar) bar.style.width = p + '%';
+			if (label) label.textContent = p + '%';
+			if (text && t) text.textContent = t;
+		}
+
 		function startUpgrade(isForce, keepConfig) {
 			if (isForce) {
 				var repo = (document.getElementById('cfg-repo')||{}).value.trim();
@@ -166,12 +176,7 @@ return view.extend({
 			// 假进度条只在到达刷写阶段前推进；进入刷写后改由真实状态驱动
 			var interval = setInterval(function() {
 				if (idx < 3) {
-					var bar = document.getElementById('progress-bar');
-					var label = document.getElementById('progress-label');
-					var text = document.getElementById('progress-text');
-					if (bar) bar.style.width = steps[idx].p + '%';
-					if (label) label.textContent = steps[idx].p + '%';
-					if (text) text.textContent = steps[idx].t;
+					updateProgress(steps[idx].p, steps[idx].t);
 					updateOutput(steps[idx].t + '\n');
 					idx++;
 				}
