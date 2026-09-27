@@ -91,12 +91,12 @@ KEEP_MODE="${2:-keep}"
 echo "========================================"
 echo "  固件在线升级"
 if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
-    echo "  系统: ${DISTRO}  |  架构: ${ARCH}"
+    echo "  系统: ${DISTRO}  |  当前架构: ${ARCH}"
 else
     if [ "$SKIP_GITHUB" = "1" ]; then
-        echo "  架构: ${ARCH}  |  固件镜像下载地址: ${DOWNLOAD_URL}"
+        echo "  当前架构: ${ARCH}  |  固件镜像下载地址: ${DOWNLOAD_URL}"
     else
-        echo "  架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
+        echo "  当前架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
     fi
 fi
 echo "========================================"
