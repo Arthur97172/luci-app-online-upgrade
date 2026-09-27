@@ -468,6 +468,17 @@ if [ -n "$ASSET_UPDATED" ] && [ -f "$TMP_FIRMWARE" ] && [ -f "${TMP_FIRMWARE}.ts
 fi
 if [ "$DOWNLOAD_SKIP" = "0" ]; then
     echo "downloading" > /tmp/online-upgrade-status
+    # 写入固件总大小供前端显示真实下载进度（格式 downloading:字节数）
+    # GitHub 模式用 ASSET_SIZE；直链模式 ASSET_SIZE 非数字，通过 HEAD 请求取 Content-Length
+    DL_TOTAL=""
+    case "$ASSET_SIZE" in
+        ''|*[!0-9]*) ;;
+        *) DL_TOTAL="$ASSET_SIZE" ;;
+    esac
+    if [ -z "$DL_TOTAL" ]; then
+        DL_TOTAL=$(curl -sIL --max-time 15 "$FULL_URL" 2>/dev/null | grep -i '^content-length:' | tail -1 | tr -dc '0-9')
+    fi
+    [ -n "$DL_TOTAL" ] && echo "downloading:$DL_TOTAL" > /tmp/online-upgrade-status
     echo "  URL: $(echo "$FULL_URL" | head -c 80)..."
     curl -sL -o "$TMP_FIRMWARE" "$FULL_URL" 2>&1
     CURL_EXIT=$?
@@ -477,8 +488,11 @@ if [ "$DOWNLOAD_SKIP" = "0" ]; then
         rm -f "$TMP_FIRMWARE"
         exit 1
     fi
-    # 校验文件大小与 GitHub 标注的 size 一致，防止下载到错误页/被截断的假固件
-    if [ -n "$ASSET_SIZE" ]; then
+    # 校验文件大小与预期一致，防止下载到错误页/被截断的假固件
+    # 仅在大小为已知数字时校验（直链模式 ASSET_SIZE 为"未知,信息无法获取"，跳过）
+    case "$ASSET_SIZE" in
+        ''|*[!0-9]*) ;;
+        *)
         ACTUAL_SIZE=$(wc -c < "$TMP_FIRMWARE" 2>/dev/null | tr -d ' ')
         if [ "$ACTUAL_SIZE" != "$ASSET_SIZE" ]; then
             echo "failed:固件大小不符（预期 ${ASSET_SIZE} 字节，实际 ${ACTUAL_SIZE}）" > /tmp/online-upgrade-status
@@ -487,7 +501,8 @@ if [ "$DOWNLOAD_SKIP" = "0" ]; then
             rm -f "$TMP_FIRMWARE"
             exit 1
         fi
-    fi
+        ;;
+    esac
     echo "$ASSET_UPDATED" > "${TMP_FIRMWARE}.ts"
     echo "  下载成功 ($(du -h "$TMP_FIRMWARE" | cut -f1))"
     echo "downloaded" > /tmp/online-upgrade-status

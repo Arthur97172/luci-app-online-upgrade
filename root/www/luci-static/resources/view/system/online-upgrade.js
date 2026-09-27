@@ -126,7 +126,16 @@ return view.extend({
 				if (countdownEl) countdownEl.textContent = String(seconds);
 				if (seconds <= 0) {
 					clearInterval(timer);
-					window.location.reload();
+					// 倒计时结束后改为探测式等待：每 5 秒尝试连接，路由器上线后再刷新
+					if (countdownEl) countdownEl.textContent = '...';
+					var probe = setInterval(function() {
+						fetch(window.location.href, {cache: 'no-store', method: 'HEAD'}).then(function(resp) {
+							if (resp.ok) {
+								clearInterval(probe);
+								window.location.reload();
+							}
+						}).catch(function() {});
+					}, 5000);
 				}
 			}, 1000);
 		}
@@ -165,17 +174,14 @@ return view.extend({
 			var forceBtn = document.getElementById('btn-force');
 			if (forceBtn) forceBtn.style.display = 'none';
 
+			// 假进度条只覆盖备份阶段（5%→25%）；下载起由真实进度/状态驱动
 			var steps = [
 				{p:5, t:'正在备份配置...'},
-				{p:25, t:'正在下载固件...'},
-				{p:50, t:'下载完成，准备刷写...'},
-				{p:75, t:'正在刷写固件，配置将自动恢复！'},
-				{p:100, t:'刷写完成，路由器即将重启...'}
+				{p:25, t:'正在下载固件...'}
 			];
 			var idx = 0;
-			// 假进度条只在到达刷写阶段前推进；进入刷写后改由真实状态驱动
 			var interval = setInterval(function() {
-				if (idx < 3) {
+				if (idx < steps.length) {
 					updateProgress(steps[idx].p, steps[idx].t);
 					updateOutput(steps[idx].t + '\n');
 					idx++;
@@ -189,9 +195,13 @@ return view.extend({
 			var reachedSysupgrade = false;
 			// 自进入 sysupgrade 状态后已轮询的次数（用于超时判定）
 			var sysupgradePolls = 0;
+			// 长时间未重启警告只触发一次
+			var sysupWarned = false;
 			// 路由器可能已重启：连续多次读取 status 文件失败（连接断开）
 			var disconnectStreak = 0;
 			var pollFails = 0;
+			// 当前进度百分比（真实进度/爬升共用，只增不减）
+			var currentPct = 25;
 			if (pollTimer) clearInterval(pollTimer);
 			pollTimer = setInterval(function() {
 				fs.exec('/bin/cat', ['/tmp/online-upgrade-status']).then(function(r) {
@@ -212,25 +222,60 @@ return view.extend({
 						if (btnCheck) { btnCheck.disabled = false; btnCheck.textContent = '检查更新'; }
 						var forceBtn = document.getElementById('btn-force');
 						if (forceBtn) forceBtn.style.display = 'inline-block';
+					} else if (status.indexOf('downloading') === 0) {
+						// 下载阶段：按真实字节数推进 25%→55%（status 格式 downloading:总字节数）
+						var parts = status.split(':');
+						var total = parseInt(parts[1], 10);
+						if (total > 0) {
+							fs.exec('/bin/sh', ['-c', 'for f in /tmp/firmware.*; do [ -f "$f" ] && wc -c < "$f"; done 2>/dev/null | sort -n | tail -1']).then(function(sr) {
+								var got = parseInt((sr.stdout || '').trim(), 10);
+								if (got > 0) {
+									var pct = 25 + Math.min(30, Math.floor(got / total * 30));
+									if (pct > currentPct) {
+										currentPct = pct;
+										updateProgress(pct, '正在下载固件... ' + Math.floor(got / 1048576) + ' MB / ' + Math.floor(total / 1048576) + ' MB');
+									}
+								}
+							}).catch(function() {});
+						} else if (currentPct < 54) {
+							// 总大小未知时缓慢爬升，封顶 54%
+							currentPct++;
+							updateProgress(currentPct, '正在下载固件...');
+						}
+					} else if (status.indexOf('downloaded') === 0) {
+						if (currentPct < 60) {
+							currentPct = 60;
+							updateProgress(60, '固件下载完成，准备刷写...');
+						}
+					} else if (status.indexOf('saving_ts') === 0) {
+						if (currentPct < 65) {
+							currentPct = 65;
+							updateProgress(65, '正在记录版本信息并创建备份...');
+						}
 					} else if (status.indexOf('sysupgrade') === 0) {
 						// 已进入刷写阶段：不立即弹重启框，继续轮询等待路由器真正重启
 						if (!reachedSysupgrade) {
 							reachedSysupgrade = true;
+							currentPct = 75;
 							updateProgress(75, '正在刷写固件，配置将自动恢复！');
-							updateOutput('系统正在进入刷写阶段，进度推进到 75%...\n');
+							updateOutput('系统正在进入刷写阶段...\n');
+						} else if (currentPct < 95) {
+							// 刷写期间缓慢爬升，封顶 95%，断连确认后才跳 100%
+							currentPct += 2;
+							if (currentPct > 95) currentPct = 95;
+							updateProgress(currentPct, '正在刷写固件，请勿断电...');
 						}
 						sysupgradePolls++;
-						updateOutput('系统正在刷写固件，请等待路由器重启...\n');
-						if (sysupgradePolls > 20) {
-							// 进入刷写后约 60 秒仍在线，判定可能失败，读取日志
-							clearInterval(interval);
+						if (sysupgradePolls > 40 && !sysupWarned) {
+							// 进入刷写约 120 秒仍在线，可能失败（只警告一次）
+							sysupWarned = true;
 							fs.exec('/bin/cat', ['/tmp/online-upgrade.log']).then(function(rl) {
 								var last = (rl.stdout || '').split('\n').slice(-5).join('\n');
 								updateOutput('\n⚠️ 已进入刷写阶段但长时间未重启，可能失败：\n' + last + '\n');
 							});
 						}
 					} else {
-						// backing_up / downloading / downloaded / saving_ts / 空
+						// backing_up / 空 等
 						sysupgradePolls = 0;
 					}
 				}).catch(function() {
