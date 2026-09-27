@@ -64,4 +64,4 @@ apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r1.apk
 
 - [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)
 
-This project is forked from gooyjq/luci-app-online-upgrade, thanks to the original author!
+This project is forked from gooyjq/luci-app-online-upgrade and further developed, thanks to the original author for their hard work!

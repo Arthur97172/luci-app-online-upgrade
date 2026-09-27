@@ -64,4 +64,4 @@ apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r1.apk
 ## 🎉 Thanks [![](https://img.shields.io/badge/-Thanks-FFFFFF.svg)](#-Thanks-)
 - [gooyjq/luci-app-online-upgrade](https://github.com/gooyjq/luci-app-online-upgrade)
 
-本项目基于 gooyjq/luci-app-online-upgrade 克隆而来，特此感谢原仓库作者的辛勤付出！！！
+本项目基于 gooyjq/luci-app-online-upgrade 克隆后二次开发，特此感谢原仓库作者的辛勤付出！！！
