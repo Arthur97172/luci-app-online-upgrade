@@ -7,8 +7,8 @@ msgstr ""
 msgid "固件在线升级"
 msgstr "Firmware Online Upgrade"
 
-msgid "从 GitHub Releases 自动检测并升级固件，保留配置。"
-msgstr "Automatically check and upgrade firmware from GitHub Releases."
+msgid "从 GitHub Releases 自动检测并升级固件，配置自动备份并恢复。"
+msgstr "Automatically check and upgrade firmware from GitHub Releases, with automatic config backup and restore."
 
 msgid "仓库配置"
 msgstr "Repository"
@@ -19,26 +19,47 @@ msgstr "GitHub Repository"
 msgid "Release 标签"
 msgstr "Release Tag"
 
+msgid "固件镜像下载地址"
+msgstr "Firmware Image Download URL"
+
 msgid "固件匹配模式"
 msgstr "Firmware Pattern"
 
-msgid "用于匹配固件文件名的正则表达式，如 combined-efi.*\\.img\\.gz"
-msgstr "Regex to match firmware filename, e.g. combined-efi.*\\.img\\.gz"
+msgid "留空或填 auto 自动匹配（兼容 .img.gz / .img / .itb / .bin）；也可填正则自定义匹配"
+msgstr "Leave empty or 'auto' to auto-match (.img.gz / .img / .itb / .bin); or enter a custom regex"
 
 msgid "下载代理"
 msgstr "Download Proxy"
 
-msgid "GitHub 下载加速代理，如 https://ghfast.top/ 或留空"
-msgstr "GitHub download proxy, e.g. https://ghfast.top/ or leave empty"
+msgid "GitHub 下载加速代理，如 https://ghfast.top/"
+msgstr "GitHub download proxy, e.g. https://ghfast.top/"
 
-msgid "保留配置"
-msgstr "Keep Config"
+msgid "版本信息"
+msgstr "Version Info"
 
-msgid "升级时保留系统配置（密码、网络、插件设置等）"
-msgstr "Preserve system configuration during upgrade"
+msgid "当前固件版本"
+msgstr "Current Firmware Version"
+
+msgid "上次升级版本"
+msgstr "Last Upgrade Version"
+
+msgid "上次升级时间"
+msgstr "Last Upgrade Time"
 
 msgid "操作"
 msgstr "Actions"
+
+msgid "监测版本"
+msgstr "Check Version"
+
+msgid "检查 GitHub Releases 是否有新固件"
+msgstr "Check GitHub Releases for new firmware"
+
+msgid "在线更新"
+msgstr "Upgrade Online"
+
+msgid "备份配置（sysupgrade -b）→ 下载固件 → 刷写（自动恢复配置 -f）→ 重启"
+msgstr "Backup config (sysupgrade -b) → download firmware → flash (auto-restore with -f) → reboot"
 
 msgid "检查更新"
 msgstr "Check Updates"

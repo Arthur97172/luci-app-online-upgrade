@@ -7,8 +7,8 @@ msgstr ""
 msgid "固件在线升级"
 msgstr "固件在线升级"
 
-msgid "从 GitHub Releases 自动检测并升级固件，保留配置。"
-msgstr "从 GitHub Releases 自动检测并升级固件，保留配置。"
+msgid "从 GitHub Releases 自动检测并升级固件，配置自动备份并恢复。"
+msgstr "从 GitHub Releases 自动检测并升级固件，配置自动备份并恢复。"
 
 msgid "仓库配置"
 msgstr "仓库配置"
@@ -19,26 +19,47 @@ msgstr "GitHub 仓库"
 msgid "Release 标签"
 msgstr "Release 标签"
 
+msgid "固件镜像下载地址"
+msgstr "固件镜像下载地址"
+
 msgid "固件匹配模式"
 msgstr "固件匹配模式"
 
-msgid "用于匹配固件文件名的正则表达式，如 combined-efi.*\\.img\\.gz"
-msgstr "用于匹配固件文件名的正则表达式，如 combined-efi.*\\.img\\.gz"
+msgid "留空或填 auto 自动匹配（兼容 .img.gz / .img / .itb / .bin）；也可填正则自定义匹配"
+msgstr "留空或填 auto 自动匹配（兼容 .img.gz / .img / .itb / .bin）；也可填正则自定义匹配"
 
 msgid "下载代理"
 msgstr "下载代理"
 
-msgid "GitHub 下载加速代理，如 https://ghfast.top/ 或留空"
-msgstr "GitHub 下载加速代理，如 https://ghfast.top/ 或留空"
+msgid "GitHub 下载加速代理，如 https://ghfast.top/"
+msgstr "GitHub 下载加速代理，如 https://ghfast.top/"
 
-msgid "保留配置"
-msgstr "保留配置"
+msgid "版本信息"
+msgstr "版本信息"
 
-msgid "升级时保留系统配置（密码、网络、插件设置等）"
-msgstr "升级时保留系统配置（密码、网络、插件设置等）"
+msgid "当前固件版本"
+msgstr "当前固件版本"
+
+msgid "上次升级版本"
+msgstr "上次升级版本"
+
+msgid "上次升级时间"
+msgstr "上次升级时间"
 
 msgid "操作"
 msgstr "操作"
+
+msgid "监测版本"
+msgstr "监测版本"
+
+msgid "检查 GitHub Releases 是否有新固件"
+msgstr "检查 GitHub Releases 是否有新固件"
+
+msgid "在线更新"
+msgstr "在线更新"
+
+msgid "备份配置（sysupgrade -b）→ 下载固件 → 刷写（自动恢复配置 -f）→ 重启"
+msgstr "备份配置（sysupgrade -b）→ 下载固件 → 刷写（自动恢复配置 -f）→ 重启"
 
 msgid "检查更新"
 msgstr "检查更新"
