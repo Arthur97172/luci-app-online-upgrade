@@ -77,7 +77,9 @@ return view.extend({
 					m = lines[i].match(/文件大小:\s*(.+)/);
 					if (m) {
 						var el = document.getElementById('latest-size');
-						if (el) el.textContent = m[1].trim();
+						// 直链模式下大小无法获取，UI 不显示该后缀（日志仍保留完整信息）
+						var sizeText = m[1].trim();
+						if (el) el.textContent = (sizeText === '未知,信息无法获取') ? '' : sizeText;
 					}
 					// 新版本号
 					m = lines[i].match(/新固件版本:\s*(.+)/);
