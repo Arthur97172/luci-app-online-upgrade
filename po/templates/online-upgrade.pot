@@ -7,92 +7,14 @@ msgstr ""
 msgid "固件在线升级"
 msgstr "Firmware Online Upgrade"
 
-msgid "从 GitHub Releases 自动检测并升级固件，配置自动备份并恢复。"
-msgstr "Automatically check and upgrade firmware from GitHub Releases, with automatic config backup and restore."
-
 msgid "仓库配置"
 msgstr "Repository"
-
-msgid "GitHub 仓库"
-msgstr "GitHub Repository"
-
-msgid "Release 标签"
-msgstr "Release Tag"
 
 msgid "固件镜像下载地址"
 msgstr "Firmware Image Download URL"
 
-msgid "固件匹配模式"
-msgstr "Firmware Pattern"
-
-msgid "留空或填 auto 自动匹配（兼容 .img.gz / .img / .itb / .bin）；也可填正则自定义匹配"
-msgstr "Leave empty or 'auto' to auto-match (.img.gz / .img / .itb / .bin); or enter a custom regex"
-
-msgid "下载代理"
-msgstr "Download Proxy"
-
-msgid "GitHub 下载加速代理，如 https://ghfast.top/"
-msgstr "GitHub download proxy, e.g. https://ghfast.top/"
-
-msgid "版本信息"
-msgstr "Version Info"
-
-msgid "当前固件版本"
-msgstr "Current Firmware Version"
-
-msgid "上次升级版本"
-msgstr "Last Upgrade Version"
-
-msgid "上次升级时间"
-msgstr "Last Upgrade Time"
-
-msgid "操作"
-msgstr "Actions"
-
-msgid "监测版本"
-msgstr "Check Version"
-
-msgid "检查 GitHub Releases 是否有新固件"
-msgstr "Check GitHub Releases for new firmware"
-
-msgid "在线更新"
-msgstr "Upgrade Online"
-
-msgid "备份配置（sysupgrade -b）→ 下载固件 → 刷写（自动恢复配置 -f）→ 重启"
-msgstr "Backup config (sysupgrade -b) → download firmware → flash (auto-restore with -f) → reboot"
-
 msgid "检查更新"
 msgstr "Check Updates"
-
-msgid "执行升级"
-msgstr "Run Upgrade"
-
-msgid "升级日志"
-msgstr "Upgrade Log"
-
-msgid "暂无日志"
-msgstr "No log yet"
-
-msgid "返回"
-msgstr "Back"
-
-msgid "刷新"
-msgstr "Refresh"
-
-msgid "正在升级..."
-msgstr "Upgrading..."
-
-msgid "系统正在后台下载固件并自动刷写，请勿断电！"
-msgstr "Downloading firmware and flashing, DO NOT POWER OFF!"
-
-msgid "升级完成后路由器将自动重启，页面会尝试重连。"
-msgstr "The router will reboot automatically."
-
-msgid "如果长时间无响应，请手动检查路由器状态。"
-msgstr "If no response, please check the router manually."
-
-msgid "等待重连"
-msgstr "Reconnect"
 
 msgid "升级进度"
 msgstr "Upgrade Progress"
