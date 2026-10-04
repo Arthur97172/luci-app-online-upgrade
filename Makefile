@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-online-upgrade
 PKG_VERSION:=1.1.1
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 # 版本约定：每次提交 PKG_RELEASE +1（1.0.0-r1 ~ r9）；
 # 达到 r10 时 PKG_VERSION 末位 +1（1.0.0 -> 1.0.1），PKG_RELEASE 重置为 1。
 # 默认构建类型为 ipk，后续在 CI 中可通过修改 .config 生成 apk
@@ -79,8 +79,6 @@ define Package/luci-app-online-upgrade/install
 	$(INSTALL_DIR) $(1)/www/luci-static/resources/view/system
 	$(INSTALL_DATA) ./root/www/luci-static/resources/view/system/online-upgrade.js \
 		$(1)/www/luci-static/resources/view/system/online-upgrade.js
-
-	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/i18n
 endef
 
 define Package/luci-app-online-upgrade/postinst
