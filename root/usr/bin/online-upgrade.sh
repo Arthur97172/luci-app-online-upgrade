@@ -550,7 +550,6 @@ else
 /usr/lib/lua/luci/controller/admin_system/online_upgrade.lua
 /usr/share/luci/menu.d/luci-app-online-upgrade.json
 /usr/share/rpcd/acl.d/luci-app-online-upgrade.json
-/usr/lib/lua/luci/model/cbi/admin_system/online_upgrade.lua
 /www/luci-static/resources/view/system/online-upgrade.js"
     fi
     # 过滤掉已不存在的文件（如已被删除的 uci-defaults 脚本），避免 tar 报错
