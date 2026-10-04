@@ -11,6 +11,24 @@ return view.extend({
 	render: function() {
 		var _this = this;
 		var pollTimer = null;
+		// 重启/IP 变更后用于探测重连的候选地址。必须在页面加载时从 UCI 取好快照——
+		// 探测发生在路由器已下线之后，那时无法再执行 uci。
+		var reconnectHosts = '';
+		// UCI 未配置时的兜底列表（与 root/etc/config/online-upgrade 的默认值保持一致）
+		var DEFAULT_RECONNECT_HOSTS = '192.168.10.1 192.168.1.1 192.168.0.1 10.0.0.1 immortalwrt.lan openwrt.lan';
+
+		// 构造候选 URL：当前地址始终最优先，其后是配置的候选（去重）。
+		// 协议沿用当前页面，避免 https 页面探测 http 被浏览器按混合内容拦截。
+		function buildCandidates() {
+			var proto = window.location.protocol;
+			var hosts = [window.location.host];
+			var list = (reconnectHosts || DEFAULT_RECONNECT_HOSTS).split(/[\s,]+/);
+			for (var i = 0; i < list.length; i++) {
+				var h = list[i].replace(/^https?:\/\//, '').replace(/\/+$/, '');
+				if (h && hosts.indexOf(h) < 0) hosts.push(h);
+			}
+			return hosts.map(function(h) { return proto + '//' + h + '/'; });
+		}
 
 		function runCheck() {
 			var btn = document.getElementById('btn-check');
@@ -111,42 +129,67 @@ return view.extend({
 			if (label) label.textContent = '100%';
 			if (text) text.textContent = '刷写完成，路由器即将重启...';
 			var seconds = 120;
+			var settled = false;
+			var probeTimer = null;
+			var probing = false;
+
+			// 收到任何 HTTP 响应（含跨源 opaque 响应）即说明该地址已可达；只有网络层
+			// 失败（reject）才算未上线。不能用 resp.ok：它要求 2xx，而重启后浏览器带着
+			// 失效 cookie 访问 LuCI 会返回非 2xx，会被误判成"没上线"而永远等不到。
+			function goTo(url) {
+				if (settled) return;
+				settled = true;
+				if (probeTimer) clearInterval(probeTimer);
+				window.location.href = url;
+			}
+
+			// 按优先级顺序探测（当前地址最优先）。不用并行：并行时"最先响应的地址"
+			// 胜出，若候选里含其他设备（如光猫）可能误跳；顺序探测保证优先命中当前地址。
+			function probeCandidates() {
+				if (settled || probing) return;
+				probing = true;
+				var urls = buildCandidates();
+				var i = 0;
+				function next() {
+					if (settled || i >= urls.length) { probing = false; return; }
+					var u = urls[i++];
+					var ctl = window.AbortController ? new AbortController() : null;
+					var to = ctl ? setTimeout(function() { ctl.abort(); }, 3000) : null;
+					// no-cors：跨源读不到响应内容，但能 resolve 就证明该地址可达
+					fetch(u, {mode: 'no-cors', cache: 'no-store', method: 'GET', signal: ctl ? ctl.signal : undefined})
+						.then(function() { if (to) clearTimeout(to); probing = false; goTo(u); })
+						.catch(function() { if (to) clearTimeout(to); next(); });
+				}
+				next();
+			}
+
+			var candLinks = buildCandidates().map(function(u) {
+				return E('a', {href: u, style: 'color:#4CAF50;margin:0 6px;'}, u.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+			});
 			var overlay = E('div', {id: 'reboot-overlay', style: 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;'}, [
 				E('div', {style: 'font-size:28px;font-weight:600;margin-bottom:10px;'}, '🔄 路由器正在重启'),
-				E('div', {style: 'font-size:14px;color:#aaa;margin-bottom:20px;'}, '固件刷写完成，请勿断电！若 IP 变更，请用新地址重新登录。'),
+				E('div', {id: 'reboot-tip', style: 'font-size:14px;color:#aaa;margin-bottom:20px;'}, '固件刷写完成，请勿断电！正在等待路由器上线...'),
 				E('div', {id: 'countdown', style: 'font-size:48px;font-weight:700;'}, String(seconds)),
-				E('div', {style: 'font-size:13px;color:#888;margin-top:8px;margin-bottom:24px;'}, '秒后自动刷新'),
-				E('button', {style: 'padding:10px 30px;font-size:16px;border:2px solid #4CAF50;background:transparent;color:#4CAF50;border-radius:8px;cursor:pointer;', click: function() { window.location.reload(); }}, '立即刷新')
+				E('div', {style: 'font-size:13px;color:#888;margin-top:8px;margin-bottom:24px;'}, '秒后自动探测重连'),
+				E('button', {style: 'padding:10px 30px;font-size:16px;border:2px solid #4CAF50;background:transparent;color:#4CAF50;border-radius:8px;cursor:pointer;', click: function() { probeCandidates(); }}, '立即重连'),
+				E('div', {style: 'font-size:12px;color:#888;margin-top:22px;max-width:560px;text-align:center;line-height:1.9;'}, [
+					'自动重连失败时可手动尝试：',
+					E('div', {}, candLinks)
+				])
 			]);
 			document.body.appendChild(overlay);
 
 			var countdownEl = document.getElementById('countdown');
+			var tipEl = document.getElementById('reboot-tip');
 			var timer = setInterval(function() {
 				seconds--;
 				if (countdownEl) countdownEl.textContent = String(seconds);
 				if (seconds <= 0) {
 					clearInterval(timer);
-					// 倒计时结束后改为探测式等待：每 5 秒探测 LuCI 登录页（无需鉴权，
-					// 重启后 session 失效时当前页面会返回 403，不能拿它当探针）
 					if (countdownEl) countdownEl.textContent = '...';
-					var probeFails = 0;
-					var probe = setInterval(function() {
-						fetch('/cgi-bin/luci/', {cache: 'no-store', method: 'HEAD'}).then(function(resp) {
-							if (resp.ok) {
-								clearInterval(probe);
-								window.location.reload();
-							} else {
-								probeFails++;
-							}
-						}).catch(function() { probeFails++; });
-						// 兜底：连续 3 次（约 15 秒）探测失败，提示手动检查
-						if (probeFails >= 3) {
-							clearInterval(probe);
-							if (countdownEl) countdownEl.textContent = '!';
-							var tip = overlay.querySelector('div:nth-child(2)');
-							if (tip) tip.textContent = '路由器可能尚未启动或 IP 已变更，请手动刷新或检查路由器状态。';
-						}
-					}, 5000);
+					if (tipEl) tipEl.textContent = '正在探测路由器是否上线（IP 变更时会逐个尝试候选地址）...';
+					probeCandidates();
+					probeTimer = setInterval(probeCandidates, 5000);
 				}
 			}, 1000);
 		}
@@ -472,7 +515,7 @@ return view.extend({
 
 		function saveCfg() {
 			var g = function(id) { return (document.getElementById(id) || {}).value || ''; };
-			var cmd = "uci set online-upgrade.settings.repo='" + g('cfg-repo').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.tag='" + g('cfg-tag').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.direct_url='" + g('cfg-direct-url').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.proxy='" + g('cfg-proxy').replace(/'/g,"'\\''") + "' && uci commit online-upgrade";
+			var cmd = "uci set online-upgrade.settings.repo='" + g('cfg-repo').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.tag='" + g('cfg-tag').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.direct_url='" + g('cfg-direct-url').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.proxy='" + g('cfg-proxy').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.reconnect_hosts='" + g('cfg-reconnect-hosts').replace(/'/g,"'\\''") + "' && uci commit online-upgrade";
 			fs.exec('/bin/sh', ['-c', cmd]).then(function() {
 				ui.addNotification(null, E('p', '配置已保存'), 'info');
 			});
@@ -503,6 +546,12 @@ return view.extend({
 					var tagEl = document.getElementById('cfg-tag');
 					if (tagEl && tagEl.value === 'tag') tagEl.value = '';
 				}
+			});
+			// 取重连候选地址快照（必须在路由器下线前读好——下线后无法再执行 uci）
+			fs.exec('/bin/sh', ['-c', 'uci -q get online-upgrade.settings.reconnect_hosts 2>/dev/null']).then(function(r) {
+				reconnectHosts = (r.stdout || '').trim() || DEFAULT_RECONNECT_HOSTS;
+				var el = document.getElementById('cfg-reconnect-hosts');
+				if (el) el.value = reconnectHosts;
 			});
 			refreshBackupInfo();
 		}, 100);
@@ -586,6 +635,13 @@ return view.extend({
 					E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 						E('label', {style: 'min-width:160px;font-size:13px;color:#555;font-weight:500;'}, '下载代理(可选)'),
 						E('input', {id: 'cfg-proxy', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: 'https://ghfast.top/'})
+					]),
+					E('div', {style: 'display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;'}, [
+						E('label', {style: 'min-width:160px;font-size:13px;color:#555;font-weight:500;padding-top:8px;'}, '重连地址'),
+						E('div', {style: 'flex:1;min-width:200px;'}, [
+							E('input', {id: 'cfg-reconnect-hosts', type: 'text', style: 'width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: DEFAULT_RECONNECT_HOSTS}),
+							E('div', {style: 'font-size:12px;color:#888;margin-top:4px;'}, '重启或 IP 变更后用于自动重连的候选地址（空格分隔，可填主机或主机:端口）')
+						])
 					]),
 					E('input', {id: 'cfg-repo', type: 'hidden'}),
 					E('input', {id: 'cfg-tag', type: 'hidden'})
