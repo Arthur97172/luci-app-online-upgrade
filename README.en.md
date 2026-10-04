@@ -60,7 +60,7 @@ opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r8.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r9.apk
 # Chinese UI needs the translation package as well
 apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```

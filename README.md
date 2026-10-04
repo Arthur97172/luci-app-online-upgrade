@@ -60,7 +60,7 @@ opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r8.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r9.apk
 # 中文界面需额外安装翻译包
 apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```

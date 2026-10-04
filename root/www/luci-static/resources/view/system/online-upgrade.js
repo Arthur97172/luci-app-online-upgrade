@@ -15,7 +15,7 @@ return view.extend({
 		// 探测发生在路由器已下线之后，那时无法再执行 uci。
 		var reconnectHosts = '';
 		// UCI 未配置时的兜底列表（与 root/etc/config/online-upgrade 的默认值保持一致）
-		var DEFAULT_RECONNECT_HOSTS = '192.168.10.1 192.168.1.1 192.168.0.1 10.0.0.1 immortalwrt.lan openwrt.lan';
+		var DEFAULT_RECONNECT_HOSTS = '192.168.1.1 10.0.0.1 immortalwrt.lan openwrt.lan';
 
 		// 构造候选 URL：当前地址始终最优先，其后是配置的候选（去重）。
 		// 协议沿用当前页面，避免 https 页面探测 http 被浏览器按混合内容拦截。
