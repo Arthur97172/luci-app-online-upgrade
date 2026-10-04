@@ -329,7 +329,7 @@ return view.extend({
 			// 换行必须拼在 _() 外面：po2lmo 的 extract_string 只反转义 \" 和 \\，不处理 \n。
 			// 若把换行写进 msgid，JS 侧算的是「真实换行」的哈希、lmo 里存的是「字面反斜杠+n」
 			// 的哈希，两边必然不等 —— 译文永远查不到，且 msgstr 会把反斜杠原样显示出来。
-			// 注：注释里不要写「下划线括号 + 字面量」的示例，tests/i18n.test.js 会一并扫到。
+			// 注：注释里不要写「下划线括号 + 字面量」的示例，静态扫描会误当成真实 msgid。
 			var msg = isForce
 				? _('Force firmware update?') + '\n\n' +
 				  _('Even if already up to date, the firmware will be re-downloaded and flashed.') + '\n' +

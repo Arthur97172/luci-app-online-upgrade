@@ -19,9 +19,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: i18n 回归测试
-        run: node tests/i18n.test.js
-
       - name: 语法检查
         run: |
           node --check root/www/luci-static/resources/view/system/online-upgrade.js

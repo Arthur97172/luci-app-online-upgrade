@@ -60,7 +60,7 @@ opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r7.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r8.apk
 # Chinese UI needs the translation package as well
 apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```
@@ -76,18 +76,16 @@ apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ## Development
 
 ```bash
-# i18n regression test (plain node, no third-party deps)
-node tests/i18n.test.js
-
 # Syntax checks
 node --check root/www/luci-static/resources/view/system/online-upgrade.js
 sh -n root/usr/bin/online-upgrade.sh
 ```
 
-> `tests/i18n.test.js` asserts that every line the shell prints resolves to a
-> translation on the JS side. LuCI's `_()` is an exact match after trimming, so a
-> mistyped msgid silently falls back to English instead of erroring — the test
-> catches that. CI runs it before the build.
+> UI strings follow the upstream LuCI convention: English msgids wrapped in `_()`,
+> translations in `po/zh_Hans/`. Note that `_()` is an exact match after trimming,
+> and that **a msgid must be a single line** — `po2lmo` does not unescape `\n`, so a
+> msgid containing a newline never resolves at runtime. Join with
+> `_('a') + '\n' + _('b')` outside `_()` instead.
 
 ## 🌟 Star
 

@@ -60,7 +60,7 @@ opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r7.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r8.apk
 # 中文界面需额外安装翻译包
 apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```
@@ -76,17 +76,15 @@ apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ## 开发
 
 ```bash
-# i18n 回归测试（纯 node，无第三方依赖）
-node tests/i18n.test.js
-
 # 语法检查
 node --check root/www/luci-static/resources/view/system/online-upgrade.js
 sh -n root/usr/bin/online-upgrade.sh
 ```
 
-> `tests/i18n.test.js` 断言 shell 输出行在 JS 侧都能查到译文。LuCI 的 `_()` 是
-> 「精确匹配 + trim」，msgid 写错只会静默退回英文而不报错，故用测试兜住。
-> CI 会在编译前先跑这一关。
+> 界面文案遵循 LuCI 上游惯例：英文 msgid + `_()`，译文放 `po/zh_Hans/`。
+> 注意 `_()` 的查表是「精确匹配 + trim」，且 **msgid 必须是单行** ——
+> `po2lmo` 不反转义 `\n`，含换行的 msgid 运行时永远查不到。换行请用
+> `_('a') + '\n' + _('b')` 拼在 `_()` 外面。
 
 ## 🌟 Star戳一戳，好运加满！😆
 > **"点过 `Star` 的朋友，颜值与智慧双双在线！✨"**
