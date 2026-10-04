@@ -298,19 +298,46 @@ msgstr ""
 msgid "do NOT keep system configuration (this plugin only)"
 msgstr ""
 
-msgid "Force firmware update?\n\nEven if already up to date, the firmware will be re-downloaded and flashed.\nMode: %s.\nDo NOT power off!"
+msgid "Force firmware update?"
 msgstr ""
 
-msgid "Start the online firmware upgrade?\n\nThe system will back up the configuration -> download firmware -> flash (%s) -> reboot.\nDo NOT power off!"
+msgid "Even if already up to date, the firmware will be re-downloaded and flashed."
 msgstr ""
 
-msgid "Restore the configuration from a backup?\n\nBackup file: %s\n\nsysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.)."
+msgid "Mode: %s."
 msgstr ""
 
-msgid "Delete all of the following backup files?\n\n%s\n\nThis cannot be undone!"
+msgid "Do NOT power off!"
 msgstr ""
 
-msgid "Restore the configuration from a local file?\n\nFile: %s (%s MB)\n\nThe file will be uploaded to the router and restored."
+msgid "Start the online firmware upgrade?"
+msgstr ""
+
+msgid "The system will back up the configuration -> download firmware -> flash (%s) -> reboot."
+msgstr ""
+
+msgid "Restore the configuration from a backup?"
+msgstr ""
+
+msgid "Backup file: %s"
+msgstr ""
+
+msgid "sysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.)."
+msgstr ""
+
+msgid "Delete all of the following backup files?"
+msgstr ""
+
+msgid "This cannot be undone!"
+msgstr ""
+
+msgid "Restore the configuration from a local file?"
+msgstr ""
+
+msgid "File: %s (%s MB)"
+msgstr ""
+
+msgid "The file will be uploaded to the router and restored."
 msgstr ""
 
 msgid "Creating configuration backup..."
@@ -346,7 +373,10 @@ msgstr ""
 msgid "No backup found under /root/, trying /etc/config/sysupgrade.tgz..."
 msgstr ""
 
-msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz\nReboot or re-apply the configuration."
+msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz"
+msgstr ""
+
+msgid "Reboot or re-apply the configuration."
 msgstr ""
 
 msgid "❌ Restore failed, no backup file found"

@@ -326,9 +326,18 @@ return view.extend({
 			var keepText = keepConfig
 				? _('keep system configuration')
 				: _('do NOT keep system configuration (this plugin only)');
+			// 换行必须拼在 _() 外面：po2lmo 的 extract_string 只反转义 \" 和 \\，不处理 \n。
+			// 若把换行写进 msgid，JS 侧算的是「真实换行」的哈希、lmo 里存的是「字面反斜杠+n」
+			// 的哈希，两边必然不等 —— 译文永远查不到，且 msgstr 会把反斜杠原样显示出来。
+			// 注：注释里不要写「下划线括号 + 字面量」的示例，tests/i18n.test.js 会一并扫到。
 			var msg = isForce
-				? fmt(_('Force firmware update?\n\nEven if already up to date, the firmware will be re-downloaded and flashed.\nMode: %s.\nDo NOT power off!'), [keepText])
-				: fmt(_('Start the online firmware upgrade?\n\nThe system will back up the configuration -> download firmware -> flash (%s) -> reboot.\nDo NOT power off!'), [keepText]);
+				? _('Force firmware update?') + '\n\n' +
+				  _('Even if already up to date, the firmware will be re-downloaded and flashed.') + '\n' +
+				  fmt(_('Mode: %s.'), [keepText]) + '\n' +
+				  _('Do NOT power off!')
+				: _('Start the online firmware upgrade?') + '\n\n' +
+				  fmt(_('The system will back up the configuration -> download firmware -> flash (%s) -> reboot.'), [keepText]) + '\n' +
+				  _('Do NOT power off!');
 			if (!confirm(msg)) return;
 
 			var progArea = document.getElementById('progress-area');
@@ -514,7 +523,9 @@ return view.extend({
 			fs.exec('/bin/sh', ['-c', 'ls -t /root/pre-upgrade-backup-*.tar.gz 2>/dev/null | head -1']).then(function(r) {
 				var latestBackup = (r.stdout || '').trim();
 				if (latestBackup) {
-					if (!confirm(fmt(_('Restore the configuration from a backup?\n\nBackup file: %s\n\nsysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.).'), [latestBackup]))) return;
+					if (!confirm(_('Restore the configuration from a backup?') + '\n\n' +
+						fmt(_('Backup file: %s'), [latestBackup]) + '\n\n' +
+						_('sysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.).'))) return;
 					updateOutput(_('Restoring configuration (using sysupgrade -f)...') + '\n');
 					fs.exec('/bin/sh', ['-c', 'sysupgrade -f "' + latestBackup + '" && echo OK || echo FAIL']).then(function(r2) {
 						if (r2.stderr) updateOutput(_('Warning:') + ' ' + r2.stderr + '\n');
@@ -530,7 +541,7 @@ return view.extend({
 					updateOutput(_('No backup found under /root/, trying /etc/config/sysupgrade.tgz...') + '\n');
 					fs.exec('/bin/sh', ['-c', 'cd / && tar xzf /etc/config/sysupgrade.tgz etc/config/ 2>/dev/null && echo OK || echo FAIL']).then(function(r3) {
 						var ok = (r3.stdout || '').indexOf('OK') >= 0;
-						updateOutput(ok ? _('✅ Configuration partially restored from /etc/config/sysupgrade.tgz\nReboot or re-apply the configuration.') + '\n' : _('❌ Restore failed, no backup file found') + '\n');
+						updateOutput(ok ? _('✅ Configuration partially restored from /etc/config/sysupgrade.tgz') + '\n' + _('Reboot or re-apply the configuration.') + '\n' : _('❌ Restore failed, no backup file found') + '\n');
 						if (ok) ui.addNotification(null, E('p', _('Configuration partially restored from /etc/config/sysupgrade.tgz')), 'info');
 					});
 				}
@@ -553,7 +564,7 @@ return view.extend({
 					return;
 				}
 				var names = files.split('\n').map(function(f) { return f.split('/').pop(); });
-				if (!confirm(fmt(_('Delete all of the following backup files?\n\n%s\n\nThis cannot be undone!'), [names.join('\n')]))) return;
+				if (!confirm(_('Delete all of the following backup files?') + '\n\n' + names.join('\n') + '\n\n' + _('This cannot be undone!'))) return;
 				fs.exec('/bin/sh', ['-c', 'rm -f /root/pre-upgrade-backup-*.tar.gz && echo OK']).then(function(r2) {
 					var ok = (r2.stdout || '').indexOf('OK') >= 0;
 					updateOutput(ok ? fmt(_('✅ Deleted %s backup file(s)'), [names.length]) + '\n' : _('❌ Failed to delete the backup files') + '\n');
@@ -576,7 +587,9 @@ return view.extend({
 				return;
 			}
 
-			if (!confirm(fmt(_('Restore the configuration from a local file?\n\nFile: %s (%s MB)\n\nThe file will be uploaded to the router and restored.'), [file.name, (file.size / 1024 / 1024).toFixed(1)]))) return;
+			if (!confirm(_('Restore the configuration from a local file?') + '\n\n' +
+				fmt(_('File: %s (%s MB)'), [file.name, (file.size / 1024 / 1024).toFixed(1)]) + '\n\n' +
+				_('The file will be uploaded to the router and restored.'))) return;
 
 			updateOutput(fmt(_('Uploading backup file (%s)...'), [file.name]) + '\n');
 

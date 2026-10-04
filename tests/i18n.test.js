@@ -4,6 +4,15 @@
 // 为什么需要它：shell 的输出行由 JS 逐行翻译，而 _() 的查表是「精确匹配 + trim」，
 // 任何一处 msgid 对不上都会静默退回英文（不报错）。本文件把这条链路变成可执行的断言。
 //
+// 两个必须守住的前提（对应 I / J / L 三段守卫）：
+//   1. po2lmo 的 extract_string 只反转义 \" 和 \\，不处理 \n —— 故 msgid 必须单行，
+//      换行要用 _('a') + '\n' + _('b') 拼在 _() 外面。本文件的 po 解析严格照此实现，
+//      不能用 JSON.parse（那会反转义 \n，恰好掩盖这类失效）。
+//   2. msgid 不得有首尾空白 —— _() 查表前会 trim。
+//
+// 注意：I/L 段用正则扫 JS 源码，注释里出现的「下划线括号 + 字面量」示例也会被扫到，
+// 所以不要在 view 的注释里写这种例子。
+//
 // 运行：node tests/i18n.test.js
 
 'use strict';
@@ -27,8 +36,32 @@ function eq(got, want, label) {
 
 // ---------- 载入 po，建立与 cbi.js 一致的 _() ----------
 
+// 复刻 po2lmo 的 extract_string：**只**反转义 \" 和 \\，其余一律原样保留。
+//
+// 这一点是整条链路最隐蔽的坑：po2lmo 不处理 \n，于是 lmo 的键是「字面反斜杠+n」串的
+// sfh 哈希；而 JS 源码里写 _('a\nb') 时，JS 解析器会把它变成**真实换行**，_() 算出的
+// 哈希必然不同 —— 含 \n 的 msgid 在运行时永远查不到（静默退回英文），且 msgstr 里若带
+// \n 也会以字面反斜杠形式显示出来。
+//
+// 因此 po 的解析必须与 po2lmo 一致，不能图省事用 JSON.parse（那会反转义 \n，从而
+// 恰好掩盖上面这个 bug —— 本测试初版就是这么写的，漏掉了 6 处失效的确认对话框）。
+function poUnescape(s) {
+	var out = '', i = 0;
+	while (i < s.length) {
+		if (s[i] === '\\' && i + 1 < s.length && (s[i + 1] === '"' || s[i + 1] === '\\')) {
+			out += s[i + 1];
+			i += 2;
+		} else {
+			out += s[i];
+			i++;
+		}
+	}
+	return out;
+}
+
 var poText = fs.readFileSync(PO_PATH, 'utf8');
 var TR = {};
+var RAW_PO = {};   // 原始 po 行（未反转义），用于诊断
 (function parsePo() {
 	var lines = poText.split('\n');
 	for (var i = 0; i < lines.length; i++) {
@@ -36,8 +69,8 @@ var TR = {};
 		if (!mid) continue;
 		var mstr = (lines[i + 1] || '').match(/^msgstr "(.*)"$/);
 		if (!mstr) continue;
-		var key = JSON.parse('"' + mid[1] + '"');
-		if (key) TR[key] = JSON.parse('"' + mstr[1] + '"');
+		var key = poUnescape(mid[1]);
+		if (key) { TR[key] = poUnescape(mstr[1]); RAW_PO[key] = mid[1]; }
 	}
 })();
 
@@ -161,8 +194,28 @@ var jsLits = {};
 })();
 var orphans = Object.keys(jsLits).filter(function(k) { return !TR[k.trim()]; });
 ok(orphans.length === 0, '存在查表必然落空的 _() 字面量',
-	orphans.map(function(k) { return JSON.stringify(k) + (TR[k] ? '  ← po 里有带空格的同名字符串' : ''); }).join('\n      '));
+	orphans.map(function(k) {
+		var why = '';
+		if (k !== k.trim()) why = '  ← 首尾有空白，_() 查表前会 trim';
+		else if (/\n/.test(k)) why = '  ← 含真实换行：po2lmo 不反转义 \\n，键必然对不上（把 \\n 挪到 _() 外面拼接）';
+		return JSON.stringify(k) + why;
+	}).join('\n      '));
 console.log('      (' + Object.keys(jsLits).length + ' 条字面量，全部命中)');
+
+// ---------- L. 守卫：_() 字面量不得含 po2lmo 不处理的转义 ----------
+//
+// po2lmo 的 extract_string 只反转义 \" 和 \\。JS 源码里任何其他转义（\n \t \r \u \x…）
+// 都会被 JS 解析器先变成真实字符，而 po 里存的是字面反斜杠序列 —— 两边哈希不同，译文
+// 永远查不到；即便查到，msgstr 里的反斜杠序列也会原样显示给用户。
+// 因此：_() 的 msgid 必须是单行纯文本，换行请用 _('a') + '\n' + _('b') 拼接。
+var BAD_ESC = /\\(?![\\"])/;
+var escLit = [];
+Object.keys(jsLits).forEach(function(k) {
+	if (BAD_ESC.test(k)) escLit.push(k);
+});
+// jsLits 的键已是 JS 运行时值（eval 过），反查源码里对应的转义写法仅用于提示
+ok(escLit.length === 0, '_() 字面量含 po2lmo 不处理的转义（\\n 等），译文必然失效',
+	escLit.map(function(k) { return JSON.stringify(k).slice(0, 80); }).join('\n      '));
 
 // ---------- J. 守卫：msgid 不允许首尾带空格 ----------
 

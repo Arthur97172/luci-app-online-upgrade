@@ -38,11 +38,15 @@ ImmortalWrt / OpenWrt LuCI plugin - Online firmware upgrade from GitHub Releases
 cd openwrt
 make package/luci-app-online-upgrade/compile V=s
 
-# The Chinese translation is a separate subpackage: select the language first
-# (make defconfig will not enable it on its own)
+# The Chinese translation is a separate subpackage: select the language first.
+# (luci.mk's DEFAULT is LUCI_LANG_zh_Hans||(ALL&&m); the SDK ships CONFIG_ALL=y so it
+#  already falls back to m — set it explicitly so we don't depend on that default.)
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
 make defconfig
-make package/luci-i18n-online-upgrade-zh-cn/compile V=s
+# Only the directory-level target is needed: LuciTranslation is evaluated inside the same
+# Makefile, so the i18n subpackage shares this builddir and is built along with it.
+# Note: there is no package/luci-i18n-online-upgrade-zh-cn/compile target.
+make package/luci-app-online-upgrade/compile V=s
 ```
 
 ## Manual Install
@@ -56,7 +60,7 @@ opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r6.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r7.apk
 # Chinese UI needs the translation package as well
 apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```

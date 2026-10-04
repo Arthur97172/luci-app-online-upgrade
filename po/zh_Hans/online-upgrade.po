@@ -318,20 +318,51 @@ msgstr "保留系统配置"
 msgid "do NOT keep system configuration (this plugin only)"
 msgstr "不保留系统配置（仅保留本插件）"
 
-msgid "Force firmware update?\n\nEven if already up to date, the firmware will be re-downloaded and flashed.\nMode: %s.\nDo NOT power off!"
-msgstr "确定强制更新固件？\n\n即使当前已是最新版本，也会重新下载并刷写。\n模式：%s。\n请勿断电！"
+# 确认对话框：msgid 必须单行。
+# po2lmo 的 extract_string 不反转义 \n，故 lmo 的键是「字面反斜杠+n」串的哈希，而 JS 源码里
+# 的 '\n' 会被 JS 解析成真实换行 —— 含 \n 的 msgid 运行时必然查不到，译文永远不生效。
+# 换行一律由 JS 侧 _('a') + '\n' + _('b') 拼接，msgstr 同样不得含 \n。
+msgid "Force firmware update?"
+msgstr "确定强制更新固件？"
 
-msgid "Start the online firmware upgrade?\n\nThe system will back up the configuration -> download firmware -> flash (%s) -> reboot.\nDo NOT power off!"
-msgstr "确定执行在线固件升级？\n\n系统将自动备份配置 → 下载固件 → 刷写（%s）→ 重启。\n请勿断电！"
+msgid "Even if already up to date, the firmware will be re-downloaded and flashed."
+msgstr "即使当前已是最新版本，也会重新下载并刷写。"
 
-msgid "Restore the configuration from a backup?\n\nBackup file: %s\n\nsysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.)."
-msgstr "确定从备份自动恢复配置？\n\n备份文件: %s\n\nsysupgrade 将使用此备份恢复所有配置（包括网络、WiFi、防火墙等）。"
+msgid "Mode: %s."
+msgstr "模式：%s。"
 
-msgid "Delete all of the following backup files?\n\n%s\n\nThis cannot be undone!"
-msgstr "确定删除以下所有备份文件？\n\n%s\n\n此操作不可撤销！"
+msgid "Do NOT power off!"
+msgstr "请勿断电！"
 
-msgid "Restore the configuration from a local file?\n\nFile: %s (%s MB)\n\nThe file will be uploaded to the router and restored."
-msgstr "确定从本地文件恢复配置？\n\n文件: %s (%s MB)\n\n将上传该备份文件到路由器并恢复配置。"
+msgid "Start the online firmware upgrade?"
+msgstr "确定执行在线固件升级？"
+
+msgid "The system will back up the configuration -> download firmware -> flash (%s) -> reboot."
+msgstr "系统将自动备份配置 → 下载固件 → 刷写（%s）→ 重启。"
+
+msgid "Restore the configuration from a backup?"
+msgstr "确定从备份自动恢复配置？"
+
+msgid "Backup file: %s"
+msgstr "备份文件: %s"
+
+msgid "sysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.)."
+msgstr "sysupgrade 将使用此备份恢复所有配置（包括网络、WiFi、防火墙等）。"
+
+msgid "Delete all of the following backup files?"
+msgstr "确定删除以下所有备份文件？"
+
+msgid "This cannot be undone!"
+msgstr "此操作不可撤销！"
+
+msgid "Restore the configuration from a local file?"
+msgstr "确定从本地文件恢复配置？"
+
+msgid "File: %s (%s MB)"
+msgstr "文件: %s (%s MB)"
+
+msgid "The file will be uploaded to the router and restored."
+msgstr "将上传该备份文件到路由器并恢复配置。"
 
 # 备份 / 恢复
 msgid "Creating configuration backup..."
@@ -367,8 +398,11 @@ msgstr "❌ 恢复失败"
 msgid "No backup found under /root/, trying /etc/config/sysupgrade.tgz..."
 msgstr "未找到 /root/ 下的备份，尝试从 /etc/config/sysupgrade.tgz 恢复..."
 
-msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz\nReboot or re-apply the configuration."
-msgstr "✅ 配置已从 /etc/config/sysupgrade.tgz 恢复（部分恢复）\n建议重启或重新应用配置。"
+msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz"
+msgstr "✅ 配置已从 /etc/config/sysupgrade.tgz 部分恢复"
+
+msgid "Reboot or re-apply the configuration."
+msgstr "请重启或重新应用配置。"
 
 msgid "❌ Restore failed, no backup file found"
 msgstr "❌ 恢复失败，未找到任何备份文件"

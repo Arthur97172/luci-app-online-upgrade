@@ -38,10 +38,15 @@ ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 cd openwrt
 make package/luci-app-online-upgrade/compile V=s
 
-# 中文翻译是独立子包，需先选中语言再编译（make defconfig 默认不会勾选它）
+# 中文翻译是独立子包，需先选中语言再编译
+# （luci.mk 的 DEFAULT 是 LUCI_LANG_zh_Hans||(ALL&&m)；SDK 自带 CONFIG_ALL=y，
+#   本就落到 m，这里显式置 y 以免依赖该默认值）
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
 make defconfig
-make package/luci-i18n-online-upgrade-zh-cn/compile V=s
+# 只需目录级目标：LuciTranslation 在同一个 Makefile 里求值，i18n 子包与该目录同属
+# 一个 builddir，会一并编译出 luci-i18n-online-upgrade-zh-cn。
+# 注意：不存在 package/luci-i18n-online-upgrade-zh-cn/compile 这个目标。
+make package/luci-app-online-upgrade/compile V=s
 ```
 
 ## 手动安装
@@ -55,7 +60,7 @@ opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r6.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r7.apk
 # 中文界面需额外安装翻译包
 apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```
