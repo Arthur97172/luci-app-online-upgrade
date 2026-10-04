@@ -17,6 +17,7 @@ ImmortalWrt / OpenWrt LuCI plugin - Online firmware upgrade from GitHub Releases
 - **Multi-format compatibility**: Compatible with `.img.gz` / `.img` / `.itb` (ARM64 etc.) / `.bin` and other firmware formats
 - **SNAPSHOT support**: Supports SNAPSHOT firmware, uses revision number `r36350` to determine newness, falls back to compile timestamp when revision is absent
 - **Multi package formats**: Compiles both `.ipk` (opkg) and `.apk` (apk) formats, compatible with OpenWrt 23.05 and earlier and 25.12+
+- **Localization**: UI strings follow the upstream LuCI convention of English msgids wired into i18n, shipped as the separate package `luci-i18n-online-upgrade-zh-cn`. English UI shows English, Chinese UI shows Chinese
 
 ## Usage
 
@@ -36,6 +37,12 @@ ImmortalWrt / OpenWrt LuCI plugin - Online firmware upgrade from GitHub Releases
 # Put this plugin into openwrt/package/luci-app-online-upgrade/
 cd openwrt
 make package/luci-app-online-upgrade/compile V=s
+
+# The Chinese translation is a separate subpackage: select the language first
+# (make defconfig will not enable it on its own)
+echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
+make defconfig
+make package/luci-i18n-online-upgrade-zh-cn/compile V=s
 ```
 
 ## Manual Install
@@ -43,18 +50,40 @@ make package/luci-app-online-upgrade/compile V=s
 **opkg (OpenWrt/ImmortalWrt 23.05 and earlier):**
 ```bash
 opkg install luci-app-online-upgrade_1.1.1_all.ipk
+# Chinese UI needs the translation package as well
+opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 ```
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r5.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r6.apk
+# Chinese UI needs the translation package as well
+apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```
+
+> The translation package only supplies Chinese strings. The plugin works fine without it — the UI just stays in English.
 
 ## Dependencies
 
 - curl
 - jsonfilter
 - LuCI (luci-base)
+
+## Development
+
+```bash
+# i18n regression test (plain node, no third-party deps)
+node tests/i18n.test.js
+
+# Syntax checks
+node --check root/www/luci-static/resources/view/system/online-upgrade.js
+sh -n root/usr/bin/online-upgrade.sh
+```
+
+> `tests/i18n.test.js` asserts that every line the shell prints resolves to a
+> translation on the JS side. LuCI's `_()` is an exact match after trimming, so a
+> mistyped msgid silently falls back to English instead of erroring — the test
+> catches that. CI runs it before the build.
 
 ## 🌟 Star
 

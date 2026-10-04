@@ -1,26 +1,492 @@
 msgid ""
 msgstr ""
-"Content-Type: text/plain; charset=UTF-8\n"
 "Project-Id-Version: luci-app-online-upgrade\n"
-"Language: en_US\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-04 00:00+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 
-msgid "固件在线升级"
-msgstr "Firmware Online Upgrade"
+msgid "Firmware Online Upgrade"
+msgstr ""
 
-msgid "仓库配置"
-msgstr "Repository"
+msgid "Online Upgrade"
+msgstr ""
 
-msgid "固件镜像下载地址"
-msgstr "Firmware Image Download URL"
+msgid "Firmware Status"
+msgstr ""
 
-msgid "检查更新"
-msgstr "Check Updates"
+msgid "Repository"
+msgstr ""
 
-msgid "升级进度"
-msgstr "Upgrade Progress"
+msgid "Backup & Restore"
+msgstr ""
 
-msgid "重连地址"
-msgstr "Reconnect Addresses"
+msgid "Upgrade Progress"
+msgstr ""
 
-msgid "重启或 IP 变更后用于自动重连的候选地址（空格分隔，可填主机或主机:端口）"
-msgstr "Candidate addresses for auto-reconnect after reboot or IP change (space-separated; host or host:port)"
+msgid "Current version"
+msgstr ""
+
+msgid "Latest version"
+msgstr ""
+
+msgid "Firmware version"
+msgstr ""
+
+msgid "Detecting..."
+msgstr ""
+
+msgid "Loading..."
+msgstr ""
+
+msgid "Checking status..."
+msgstr ""
+
+msgid "Check Update"
+msgstr ""
+
+msgid "Upgrade Now"
+msgstr ""
+
+msgid "Force Update"
+msgstr ""
+
+msgid "Upgrade Now (clean)"
+msgstr ""
+
+msgid "Force Update (clean)"
+msgstr ""
+
+msgid "Without keeping system configuration:"
+msgstr ""
+
+msgid "Save Configuration"
+msgstr ""
+
+msgid "Parse"
+msgstr ""
+
+msgid "📦 Create Backup"
+msgstr ""
+
+msgid "⬇ Download Backup"
+msgstr ""
+
+msgid "🔄 Auto Restore"
+msgstr ""
+
+msgid "📂 Manual Restore"
+msgstr ""
+
+msgid "🗑 Delete Backups"
+msgstr ""
+
+msgid "Reconnect Now"
+msgstr ""
+
+msgid "Create a configuration backup under /root/"
+msgstr ""
+
+msgid "Restore from a backup file stored on the router"
+msgstr ""
+
+msgid "Restore from a backup file uploaded from this computer"
+msgstr ""
+
+msgid "Delete all backup files under /root/"
+msgstr ""
+
+msgid "Firmware image URL"
+msgstr ""
+
+msgid "GitHub Release Tag URL"
+msgstr ""
+
+msgid "Download proxy (optional)"
+msgstr ""
+
+msgid "Reconnect addresses"
+msgstr ""
+
+msgid "Candidate addresses used to reconnect automatically after a reboot or IP change (space-separated; host or host:port)"
+msgstr ""
+
+msgid "Note: the firmware image URL takes priority over the GitHub Release Tag URL. In direct-URL mode the version is not checked - use \"Force Update\" to flash directly. A GitHub Release Tag URL must be parsed with \"Parse\", and both take effect only after \"Save Configuration\"."
+msgstr ""
+
+msgid "Checking..."
+msgstr ""
+
+msgid "Checking for firmware updates, please wait..."
+msgstr ""
+
+msgid "✅ New firmware available!"
+msgstr ""
+
+msgid "❌ Check failed"
+msgstr ""
+
+msgid "❌ Check failed - GitHub API rate limit exceeded"
+msgstr ""
+
+msgid "✓ Already up to date"
+msgstr ""
+
+msgid "Check failed:"
+msgstr ""
+
+msgid "First check"
+msgstr ""
+
+msgid "New SNAPSHOT (r%s > r%s)"
+msgstr ""
+
+msgid "New SNAPSHOT (build time %s)"
+msgstr ""
+
+msgid "Already the latest SNAPSHOT"
+msgstr ""
+
+msgid "New firmware v%s (current v%s)"
+msgstr ""
+
+msgid "Firmware recompiled (v%s)"
+msgstr ""
+
+msgid "Already the latest (v%s)"
+msgstr ""
+
+msgid "Firmware recompiled (%s)"
+msgstr ""
+
+msgid "Already the latest"
+msgstr ""
+
+msgid "Download failed (curl exit: %s)"
+msgstr ""
+
+msgid "Firmware size mismatch (expected %s bytes, got %s bytes)"
+msgstr ""
+
+msgid "Current firmware:"
+msgstr ""
+
+msgid "New firmware version:"
+msgstr ""
+
+msgid "Latest firmware:"
+msgstr ""
+
+msgid "File size:"
+msgstr ""
+
+msgid "Build time:"
+msgstr ""
+
+msgid "Reason:"
+msgstr ""
+
+msgid "System:"
+msgstr ""
+
+msgid "Architecture:"
+msgstr ""
+
+msgid "Repository:"
+msgstr ""
+
+msgid "Tag:"
+msgstr ""
+
+msgid "Firmware image URL:"
+msgstr ""
+
+msgid "Backup created:"
+msgstr ""
+
+msgid "Firmware already downloaded, skipping"
+msgstr ""
+
+msgid "Recorded version:"
+msgstr ""
+
+msgid "Download complete"
+msgstr ""
+
+msgid "Command:"
+msgstr ""
+
+msgid "Archive contains %s files"
+msgstr ""
+
+msgid "Retry attempt %s..."
+msgstr ""
+
+msgid "URL: %s"
+msgstr ""
+
+msgid "Current system: %s"
+msgstr ""
+
+msgid "Error: GitHub API returned HTTP %s"
+msgstr ""
+
+msgid "Error: download failed! (curl exit: %s)"
+msgstr ""
+
+msgid "Error: firmware size mismatch (expected %s bytes, got %s bytes)"
+msgstr ""
+
+msgid "Hint: firmware file name is \"%s\"; make sure the release really contains it"
+msgstr ""
+
+msgid "Backing up configuration..."
+msgstr ""
+
+msgid "Downloading firmware..."
+msgstr ""
+
+msgid "Downloading firmware... %s MB / %s MB"
+msgstr ""
+
+msgid "Firmware downloaded, preparing to flash..."
+msgstr ""
+
+msgid "Recording version info and creating a backup..."
+msgstr ""
+
+msgid "Flashing firmware, the configuration will be restored automatically!"
+msgstr ""
+
+msgid "Entering the flashing stage..."
+msgstr ""
+
+msgid "Flashing firmware, do NOT power off..."
+msgstr ""
+
+msgid "⚠️ Flashing started but the router has not rebooted for a long time; it may have failed:"
+msgstr ""
+
+msgid "❌ Upgrade failed:"
+msgstr ""
+
+msgid "Flashing complete, the router is about to reboot..."
+msgstr ""
+
+msgid "🔄 The router is rebooting"
+msgstr ""
+
+msgid "Firmware flashed. Do NOT power off! Waiting for the router to come online..."
+msgstr ""
+
+msgid "seconds until auto-reconnect probe"
+msgstr ""
+
+msgid "If auto-reconnect fails, try one of these manually:"
+msgstr ""
+
+msgid "Probing whether the router is online (candidate addresses are tried in order when the IP changed)..."
+msgstr ""
+
+msgid "Please fill in the firmware image URL, or parse a GitHub Release Tag URL, before forcing an update."
+msgstr ""
+
+msgid "keep system configuration"
+msgstr ""
+
+msgid "do NOT keep system configuration (this plugin only)"
+msgstr ""
+
+msgid "Force firmware update?\n\nEven if already up to date, the firmware will be re-downloaded and flashed.\nMode: %s.\nDo NOT power off!"
+msgstr ""
+
+msgid "Start the online firmware upgrade?\n\nThe system will back up the configuration -> download firmware -> flash (%s) -> reboot.\nDo NOT power off!"
+msgstr ""
+
+msgid "Restore the configuration from a backup?\n\nBackup file: %s\n\nsysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.)."
+msgstr ""
+
+msgid "Delete all of the following backup files?\n\n%s\n\nThis cannot be undone!"
+msgstr ""
+
+msgid "Restore the configuration from a local file?\n\nFile: %s (%s MB)\n\nThe file will be uploaded to the router and restored."
+msgstr ""
+
+msgid "Creating configuration backup..."
+msgstr ""
+
+msgid "❌ Backup failed:"
+msgstr ""
+
+msgid "✅ Backup file: %s | %s | %s"
+msgstr ""
+
+msgid "⚠️ Config backup timestamp %s (legacy backup)"
+msgstr ""
+
+msgid "⚠️ No backup file"
+msgstr ""
+
+msgid "Restoring configuration (using sysupgrade -f)..."
+msgstr ""
+
+msgid "Warning:"
+msgstr ""
+
+msgid "✅ Configuration restored. Reboot the router to apply it."
+msgstr ""
+
+msgid "✅ Configuration restored from %s"
+msgstr ""
+
+msgid "❌ Restore failed"
+msgstr ""
+
+msgid "No backup found under /root/, trying /etc/config/sysupgrade.tgz..."
+msgstr ""
+
+msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz\nReboot or re-apply the configuration."
+msgstr ""
+
+msgid "❌ Restore failed, no backup file found"
+msgstr ""
+
+msgid "Configuration partially restored from /etc/config/sysupgrade.tgz"
+msgstr ""
+
+msgid "No backup files to delete"
+msgstr ""
+
+msgid "✅ Deleted %s backup file(s)"
+msgstr ""
+
+msgid "❌ Failed to delete the backup files"
+msgstr ""
+
+msgid "✅ All backup files deleted"
+msgstr ""
+
+msgid "❌ Please choose a .tar.gz backup file"
+msgstr ""
+
+msgid "Uploading backup file (%s)..."
+msgstr ""
+
+msgid "Restoring..."
+msgstr ""
+
+msgid "✅ Configuration restored from the uploaded backup file"
+msgstr ""
+
+msgid "❌ Upload failed:"
+msgstr ""
+
+msgid "Parsed: repository=%s, tag=%s"
+msgstr ""
+
+msgid "Invalid URL format"
+msgstr ""
+
+msgid "Configuration saved"
+msgstr ""
+
+msgid "No file data received"
+msgstr ""
+
+msgid "Uploaded file is not a valid gzip archive"
+msgstr ""
+
+msgid "Configuration restored from the uploaded backup. Reboot the router to apply it."
+msgstr ""
+
+msgid "Restore failed; the backup file may be corrupted"
+msgstr ""
+
+msgid "Update record has been reset."
+msgstr ""
+
+msgid "Note: sysupgrade will restore this backup automatically via -f"
+msgstr ""
+
+msgid "Error: backup failed!"
+msgstr ""
+
+msgid "Error: GitHub repository / tag is not configured."
+msgstr ""
+
+msgid "No default release source is used. Configure it first:"
+msgstr ""
+
+msgid "Or paste a GitHub Release Tag URL in LuCI and click \"Parse\""
+msgstr ""
+
+msgid "[1/2] Firmware image URL mode, skipping release lookup"
+msgstr ""
+
+msgid "[1/2] Fetching release information..."
+msgstr ""
+
+msgid "Warning: direct GitHub API access failed, retrying through the proxy..."
+msgstr ""
+
+msgid "Warning: GitHub API rate limited, waiting before retry..."
+msgstr ""
+
+msgid "Error: GitHub API rate limit exceeded (60 requests/hour, HTTP 403)"
+msgstr ""
+
+msgid "Wait an hour and retry, or set github_token to raise the limit to 5000/hour"
+msgstr ""
+
+msgid "[2/2] Looking for the latest firmware..."
+msgstr ""
+
+msgid "Error: no matching firmware file found"
+msgstr ""
+
+msgid "Hint: customize the match pattern in \"Advanced settings -> Firmware pattern\""
+msgstr ""
+
+msgid "Error: could not resolve the firmware download URL (jsonfilter found no browser_download_url)"
+msgstr ""
+
+msgid ">>> New firmware available!"
+msgstr ""
+
+msgid "Upgrade: online-upgrade.sh upgrade"
+msgstr ""
+
+msgid "[Running upgrade]"
+msgstr ""
+
+msgid "Step 1: Downloading firmware..."
+msgstr ""
+
+msgid "Hint: the download may have been intercepted by the proxy or returned an error page; check the PROXY setting"
+msgstr ""
+
+msgid "Step 2: Recording firmware version..."
+msgstr ""
+
+msgid "Step 3: Creating sysupgrade configuration backup..."
+msgstr ""
+
+msgid "Error: configuration backup failed!"
+msgstr ""
+
+msgid "Step 3: Creating a minimal backup of this plugin only (clean upgrade, system config not kept)..."
+msgstr ""
+
+msgid "Error: plugin backup failed!"
+msgstr ""
+
+msgid "Step 4: Running sysupgrade (configuration will be restored automatically)..."
+msgstr ""
+
+msgid "Step 4: Running sysupgrade (clean upgrade, plugin only)..."
+msgstr ""
+
+msgid "Saving the installed package list..."
+msgstr ""
+

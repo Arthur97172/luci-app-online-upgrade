@@ -1,7 +1,7 @@
 module("luci.controller.admin_system.online_upgrade", package.seeall)
 
 function index()
-	local page = entry({"admin", "system", "online_upgrade"}, view("system/online-upgrade"), "在线升级", 60)
+	local page = entry({"admin", "system", "online_upgrade"}, view("system/online-upgrade"), "Online Upgrade", 60)
 	page.acl_depends = { "luci-app-online-upgrade" }
 
 	-- 备份下载端点
@@ -17,13 +17,13 @@ function action_download()
 
 	if not filepath or filepath == "" then
 		luci.http.status(404, "Not Found")
-		luci.http.write("备份文件不存在")
+		luci.http.write("Backup file not found")
 		return
 	end
 
 	if not fs.access(filepath, "r") then
 		luci.http.status(500, "Internal Error")
-		luci.http.write("无法读取备份文件")
+		luci.http.write("Unable to read the backup file")
 		return
 	end
 

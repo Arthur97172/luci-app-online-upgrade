@@ -1,6 +1,6 @@
 {
 	"admin/system/online_upgrade": {
-		"title": "在线升级",
+		"title": "Online Upgrade",
 		"order": 60,
 		"action": {
 			"type": "view",

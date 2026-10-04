@@ -1,0 +1,515 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-online-upgrade\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-04 00:00+0800\n"
+"PO-Revision-Date: 2026-10-04 00:00+0800\n"
+"Last-Translator: Arthur <arthur@users.noreply.github.com>\n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 标题 / 导航
+msgid "Firmware Online Upgrade"
+msgstr "固件在线升级"
+
+msgid "Online Upgrade"
+msgstr "在线升级"
+
+msgid "Firmware Status"
+msgstr "固件状态"
+
+msgid "Repository"
+msgstr "仓库配置"
+
+msgid "Backup & Restore"
+msgstr "备份 & 恢复"
+
+msgid "Upgrade Progress"
+msgstr "升级进度"
+
+# 状态卡片
+msgid "Current version"
+msgstr "当前版本"
+
+msgid "Latest version"
+msgstr "最新版本"
+
+msgid "Firmware version"
+msgstr "固件版本"
+
+msgid "Detecting..."
+msgstr "检测中..."
+
+msgid "Loading..."
+msgstr "加载中..."
+
+msgid "Checking status..."
+msgstr "状态检查中..."
+
+# 按钮
+msgid "Check Update"
+msgstr "检查更新"
+
+msgid "Upgrade Now"
+msgstr "立即升级"
+
+msgid "Force Update"
+msgstr "强制更新"
+
+msgid "Upgrade Now (clean)"
+msgstr "立即升级(干净)"
+
+msgid "Force Update (clean)"
+msgstr "强制更新(干净)"
+
+msgid "Without keeping system configuration:"
+msgstr "不保留系统配置:"
+
+msgid "Save Configuration"
+msgstr "保存配置"
+
+msgid "Parse"
+msgstr "解析"
+
+msgid "📦 Create Backup"
+msgstr "📦 创建备份"
+
+msgid "⬇ Download Backup"
+msgstr "⬇ 下载备份"
+
+msgid "🔄 Auto Restore"
+msgstr "🔄 自动恢复"
+
+msgid "📂 Manual Restore"
+msgstr "📂 手动恢复"
+
+msgid "🗑 Delete Backups"
+msgstr "🗑 删除恢复"
+
+msgid "Reconnect Now"
+msgstr "立即重连"
+
+# 按钮提示
+msgid "Create a configuration backup under /root/"
+msgstr "创建配置备份到 /root/"
+
+msgid "Restore from a backup file stored on the router"
+msgstr "从路由器本地的备份文件恢复"
+
+msgid "Restore from a backup file uploaded from this computer"
+msgstr "从本地上传备份文件恢复"
+
+msgid "Delete all backup files under /root/"
+msgstr "删除 /root/ 下的所有备份文件"
+
+# 配置项
+msgid "Firmware image URL"
+msgstr "固件镜像下载地址"
+
+msgid "GitHub Release Tag URL"
+msgstr "GitHub Release Tag 地址"
+
+msgid "Download proxy (optional)"
+msgstr "下载代理(可选)"
+
+msgid "Reconnect addresses"
+msgstr "重连地址"
+
+msgid "Candidate addresses used to reconnect automatically after a reboot or IP change (space-separated; host or host:port)"
+msgstr "重启或 IP 变更后用于自动重连的候选地址（空格分隔，可填主机或主机:端口）"
+
+msgid "Note: the firmware image URL takes priority over the GitHub Release Tag URL. In direct-URL mode the version is not checked - use \"Force Update\" to flash directly. A GitHub Release Tag URL must be parsed with \"Parse\", and both take effect only after \"Save Configuration\"."
+msgstr "提示：固件镜像下载地址优先于 GitHub Release Tag 地址；直链模式下不检测版本，请使用“强制更新”直接刷写。GitHub Release Tag 地址需点击“解析”，两者配置完成后点“保存配置”生效。"
+
+# 检查更新
+msgid "Checking..."
+msgstr "检查中..."
+
+msgid "Checking for firmware updates, please wait..."
+msgstr "正在检查固件更新，请稍候..."
+
+msgid "✅ New firmware available!"
+msgstr "✅ 发现新固件！"
+
+msgid "❌ Check failed"
+msgstr "❌ 检查失败"
+
+msgid "❌ Check failed - GitHub API rate limit exceeded"
+msgstr "❌ 检查失败 - 访问超60次/小时受限"
+
+msgid "✓ Already up to date"
+msgstr "✓ 已是最新"
+
+msgid "Check failed:"
+msgstr "检测失败:"
+
+# 检测依据（Reason 码 → 文案）
+msgid "First check"
+msgstr "首次检测"
+
+msgid "New SNAPSHOT (r%s > r%s)"
+msgstr "新版 SNAPSHOT（r%s > r%s）"
+
+msgid "New SNAPSHOT (build time %s)"
+msgstr "新版 SNAPSHOT（编译时间 %s）"
+
+msgid "Already the latest SNAPSHOT"
+msgstr "已是最新 SNAPSHOT"
+
+msgid "New firmware v%s (current v%s)"
+msgstr "新版固件 v%s（当前 v%s）"
+
+msgid "Firmware recompiled (v%s)"
+msgstr "固件重新编译（v%s）"
+
+msgid "Already the latest (v%s)"
+msgstr "已是最新（v%s）"
+
+msgid "Firmware recompiled (%s)"
+msgstr "固件重新编译（%s）"
+
+msgid "Already the latest"
+msgstr "已是最新"
+
+# 升级失败（failed: 码 → 文案）
+msgid "Download failed (curl exit: %s)"
+msgstr "下载失败（curl exit: %s）"
+
+msgid "Firmware size mismatch (expected %s bytes, got %s bytes)"
+msgstr "固件大小不符（预期 %s 字节，实际 %s 字节）"
+
+# 输出框结构化键（与 online-upgrade.sh 的英文协议键一一对应）
+msgid "Current firmware:"
+msgstr "当前固件:"
+
+msgid "New firmware version:"
+msgstr "新固件版本:"
+
+msgid "Latest firmware:"
+msgstr "最新固件:"
+
+msgid "File size:"
+msgstr "文件大小:"
+
+msgid "Build time:"
+msgstr "编译时间:"
+
+msgid "Reason:"
+msgstr "检测依据:"
+
+msgid "System:"
+msgstr "系统:"
+
+msgid "Architecture:"
+msgstr "架构:"
+
+msgid "Repository:"
+msgstr "仓库:"
+
+msgid "Tag:"
+msgstr "标签:"
+
+msgid "Firmware image URL:"
+msgstr "固件镜像下载地址:"
+
+# 输出框里的动态行前缀（前缀后为脚本产生的值，原样保留）
+# 注意：不能带尾随空格 —— cbi.js 的 _() 查表前会 trim，带空格则永远命中不到
+msgid "Backup created:"
+msgstr "备份成功:"
+
+msgid "Firmware already downloaded, skipping"
+msgstr "固件已下载，跳过"
+
+msgid "Recorded version:"
+msgstr "已记录版本:"
+
+msgid "Download complete"
+msgstr "下载成功"
+
+msgid "Command:"
+msgstr "命令:"
+
+# 行内嵌动态值的输出（JS 用锚定正则捕获参数后套模板，故译文可调整语序）
+msgid "Archive contains %s files"
+msgstr "包含 %s 个文件"
+
+msgid "Retry attempt %s..."
+msgstr "第 %s 次重试..."
+
+msgid "URL: %s"
+msgstr "地址: %s"
+
+msgid "Current system: %s"
+msgstr "当前系统: %s"
+
+msgid "Error: GitHub API returned HTTP %s"
+msgstr "错误：GitHub API 返回 HTTP %s"
+
+msgid "Error: download failed! (curl exit: %s)"
+msgstr "错误：下载失败！（curl 退出码: %s）"
+
+msgid "Error: firmware size mismatch (expected %s bytes, got %s bytes)"
+msgstr "错误：固件大小不符（预期 %s 字节，实际 %s 字节）"
+
+msgid "Hint: firmware file name is \"%s\"; make sure the release really contains it"
+msgstr "提示：固件文件名为 \"%s\"，请确认 Release 中确实包含该文件"
+
+# 升级进度
+msgid "Backing up configuration..."
+msgstr "正在备份配置..."
+
+msgid "Downloading firmware..."
+msgstr "正在下载固件..."
+
+msgid "Downloading firmware... %s MB / %s MB"
+msgstr "正在下载固件... %s MB / %s MB"
+
+msgid "Firmware downloaded, preparing to flash..."
+msgstr "固件下载完成，准备刷写..."
+
+msgid "Recording version info and creating a backup..."
+msgstr "正在记录版本信息并创建备份..."
+
+msgid "Flashing firmware, the configuration will be restored automatically!"
+msgstr "正在刷写固件，配置将自动恢复！"
+
+msgid "Entering the flashing stage..."
+msgstr "系统正在进入刷写阶段..."
+
+msgid "Flashing firmware, do NOT power off..."
+msgstr "正在刷写固件，请勿断电..."
+
+msgid "⚠️ Flashing started but the router has not rebooted for a long time; it may have failed:"
+msgstr "⚠️ 已进入刷写阶段但长时间未重启，可能失败："
+
+msgid "❌ Upgrade failed:"
+msgstr "❌ 升级失败："
+
+# 重启提示浮层
+msgid "Flashing complete, the router is about to reboot..."
+msgstr "刷写完成，路由器即将重启..."
+
+msgid "🔄 The router is rebooting"
+msgstr "🔄 路由器正在重启"
+
+msgid "Firmware flashed. Do NOT power off! Waiting for the router to come online..."
+msgstr "固件刷写完成，请勿断电！正在等待路由器上线..."
+
+msgid "seconds until auto-reconnect probe"
+msgstr "秒后自动探测重连"
+
+msgid "If auto-reconnect fails, try one of these manually:"
+msgstr "自动重连失败时可手动尝试："
+
+msgid "Probing whether the router is online (candidate addresses are tried in order when the IP changed)..."
+msgstr "正在探测路由器是否上线（IP 变更时会逐个尝试候选地址）..."
+
+# 确认对话框
+msgid "Please fill in the firmware image URL, or parse a GitHub Release Tag URL, before forcing an update."
+msgstr "请先填写固件镜像下载地址，或解析 GitHub Release Tag 地址后再执行强制更新。"
+
+msgid "keep system configuration"
+msgstr "保留系统配置"
+
+msgid "do NOT keep system configuration (this plugin only)"
+msgstr "不保留系统配置（仅保留本插件）"
+
+msgid "Force firmware update?\n\nEven if already up to date, the firmware will be re-downloaded and flashed.\nMode: %s.\nDo NOT power off!"
+msgstr "确定强制更新固件？\n\n即使当前已是最新版本，也会重新下载并刷写。\n模式：%s。\n请勿断电！"
+
+msgid "Start the online firmware upgrade?\n\nThe system will back up the configuration -> download firmware -> flash (%s) -> reboot.\nDo NOT power off!"
+msgstr "确定执行在线固件升级？\n\n系统将自动备份配置 → 下载固件 → 刷写（%s）→ 重启。\n请勿断电！"
+
+msgid "Restore the configuration from a backup?\n\nBackup file: %s\n\nsysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.)."
+msgstr "确定从备份自动恢复配置？\n\n备份文件: %s\n\nsysupgrade 将使用此备份恢复所有配置（包括网络、WiFi、防火墙等）。"
+
+msgid "Delete all of the following backup files?\n\n%s\n\nThis cannot be undone!"
+msgstr "确定删除以下所有备份文件？\n\n%s\n\n此操作不可撤销！"
+
+msgid "Restore the configuration from a local file?\n\nFile: %s (%s MB)\n\nThe file will be uploaded to the router and restored."
+msgstr "确定从本地文件恢复配置？\n\n文件: %s (%s MB)\n\n将上传该备份文件到路由器并恢复配置。"
+
+# 备份 / 恢复
+msgid "Creating configuration backup..."
+msgstr "正在创建配置备份..."
+
+msgid "❌ Backup failed:"
+msgstr "❌ 备份失败:"
+
+msgid "✅ Backup file: %s | %s | %s"
+msgstr "✅ 备份文件: %s | %s | %s"
+
+msgid "⚠️ Config backup timestamp %s (legacy backup)"
+msgstr "⚠️ 配置文件备份时间 %s（旧版备份）"
+
+msgid "⚠️ No backup file"
+msgstr "⚠️ 暂无备份文件"
+
+msgid "Restoring configuration (using sysupgrade -f)..."
+msgstr "正在恢复配置 (使用 sysupgrade -f)..."
+
+msgid "Warning:"
+msgstr "警告:"
+
+msgid "✅ Configuration restored. Reboot the router to apply it."
+msgstr "✅ 配置恢复成功！建议重启路由器使配置生效。"
+
+msgid "✅ Configuration restored from %s"
+msgstr "✅ 配置已从 %s 恢复"
+
+msgid "❌ Restore failed"
+msgstr "❌ 恢复失败"
+
+msgid "No backup found under /root/, trying /etc/config/sysupgrade.tgz..."
+msgstr "未找到 /root/ 下的备份，尝试从 /etc/config/sysupgrade.tgz 恢复..."
+
+msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz\nReboot or re-apply the configuration."
+msgstr "✅ 配置已从 /etc/config/sysupgrade.tgz 恢复（部分恢复）\n建议重启或重新应用配置。"
+
+msgid "❌ Restore failed, no backup file found"
+msgstr "❌ 恢复失败，未找到任何备份文件"
+
+msgid "Configuration partially restored from /etc/config/sysupgrade.tgz"
+msgstr "配置已从 /etc/config/sysupgrade.tgz 恢复（部分）"
+
+msgid "No backup files to delete"
+msgstr "没有可删除的备份文件"
+
+msgid "✅ Deleted %s backup file(s)"
+msgstr "✅ 已删除 %s 个备份文件"
+
+msgid "❌ Failed to delete the backup files"
+msgstr "❌ 删除备份文件失败"
+
+msgid "✅ All backup files deleted"
+msgstr "✅ 已删除全部备份文件"
+
+msgid "❌ Please choose a .tar.gz backup file"
+msgstr "❌ 请选择 .tar.gz 格式的备份文件"
+
+msgid "Uploading backup file (%s)..."
+msgstr "正在上传备份文件 (%s)..."
+
+msgid "Restoring..."
+msgstr "正在执行恢复..."
+
+msgid "✅ Configuration restored from the uploaded backup file"
+msgstr "✅ 配置已从本地上传的备份文件恢复"
+
+msgid "❌ Upload failed:"
+msgstr "❌ 上传失败:"
+
+# 解析 / 保存
+msgid "Parsed: repository=%s, tag=%s"
+msgstr "已解析: 仓库=%s, 标签=%s"
+
+msgid "Invalid URL format"
+msgstr "URL 格式不正确"
+
+msgid "Configuration saved"
+msgstr "配置已保存"
+
+# CGI（online-upgrade-restore）返回的说明文字
+msgid "No file data received"
+msgstr "未收到文件数据"
+
+msgid "Uploaded file is not a valid gzip archive"
+msgstr "上传文件不是有效的 gzip 格式"
+
+msgid "Configuration restored from the uploaded backup. Reboot the router to apply it."
+msgstr "配置已从上传的备份文件恢复，建议重启路由器使配置生效"
+
+msgid "Restore failed; the backup file may be corrupted"
+msgstr "配置恢复失败，备份文件可能已损坏"
+
+# online-upgrade.sh 输出的整行文案（i18n-scan.pl 不扫描 shell，此处手工维护）
+msgid "Update record has been reset."
+msgstr "更新记录已重置。"
+
+msgid "Note: sysupgrade will restore this backup automatically via -f"
+msgstr "提示：sysupgrade 会使用 -f 参数自动恢复此备份"
+
+msgid "Error: backup failed!"
+msgstr "错误：备份失败！"
+
+msgid "Error: GitHub repository / tag is not configured."
+msgstr "错误：未配置 GitHub 仓库 / 标签。"
+
+msgid "No default release source is used. Configure it first:"
+msgstr "未使用默认固件源，请先完成配置："
+
+msgid "Or paste a GitHub Release Tag URL in LuCI and click \"Parse\""
+msgstr "或在 LuCI 页面粘贴 GitHub Release Tag 地址后点击“解析”"
+
+msgid "[1/2] Firmware image URL mode, skipping release lookup"
+msgstr "[1/2] 固件镜像下载地址模式，跳过 Release 获取"
+
+msgid "[1/2] Fetching release information..."
+msgstr "[1/2] 正在获取 Release 信息..."
+
+msgid "Warning: direct GitHub API access failed, retrying through the proxy..."
+msgstr "警告：直连 GitHub API 失败，尝试通过代理..."
+
+msgid "Warning: GitHub API rate limited, waiting before retry..."
+msgstr "警告：GitHub API 限速，等待后重试..."
+
+msgid "Error: GitHub API rate limit exceeded (60 requests/hour, HTTP 403)"
+msgstr "错误：GitHub API 访问超60次/小时受限（HTTP 403）"
+
+msgid "Wait an hour and retry, or set github_token to raise the limit to 5000/hour"
+msgstr "请等待1小时后重试，或配置 github_token 提高限制到 5000次/小时"
+
+msgid "[2/2] Looking for the latest firmware..."
+msgstr "[2/2] 正在查找最新固件..."
+
+msgid "Error: no matching firmware file found"
+msgstr "错误：未找到匹配的固件文件"
+
+msgid "Hint: customize the match pattern in \"Advanced settings -> Firmware pattern\""
+msgstr "提示：可在“高级配置→固件匹配”中自定义匹配模式"
+
+msgid "Error: could not resolve the firmware download URL (jsonfilter found no browser_download_url)"
+msgstr "错误：未能解析固件下载地址（jsonfilter 取不到 browser_download_url）"
+
+msgid ">>> New firmware available!"
+msgstr ">>> 发现新固件！"
+
+msgid "Upgrade: online-upgrade.sh upgrade"
+msgstr "升级: online-upgrade.sh upgrade"
+
+msgid "[Running upgrade]"
+msgstr "[执行升级]"
+
+msgid "Step 1: Downloading firmware..."
+msgstr "Step 1: 下载固件..."
+
+msgid "Hint: the download may have been intercepted by the proxy or returned an error page; check the PROXY setting"
+msgstr "提示：下载可能被代理拦截或返回了错误页，请检查 PROXY 配置"
+
+msgid "Step 2: Recording firmware version..."
+msgstr "Step 2: 记录固件版本..."
+
+msgid "Step 3: Creating sysupgrade configuration backup..."
+msgstr "Step 3: 创建 sysupgrade 配置备份..."
+
+msgid "Error: configuration backup failed!"
+msgstr "错误：配置备份失败！"
+
+msgid "Step 3: Creating a minimal backup of this plugin only (clean upgrade, system config not kept)..."
+msgstr "Step 3: 创建本插件最小备份（干净升级模式，系统配置不保留）..."
+
+msgid "Error: plugin backup failed!"
+msgstr "错误：插件备份失败！"
+
+msgid "Step 4: Running sysupgrade (configuration will be restored automatically)..."
+msgstr "Step 4: 执行 sysupgrade（自动恢复配置）..."
+
+msgid "Step 4: Running sysupgrade (clean upgrade, plugin only)..."
+msgstr "Step 4: 执行 sysupgrade（干净升级，仅保留本插件）..."
+
+msgid "Saving the installed package list..."
+msgstr "正在保存已安装包列表..."

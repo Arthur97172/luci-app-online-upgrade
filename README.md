@@ -17,6 +17,7 @@ ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 - **多格式兼容**：兼容 `.img.gz` / `.img` / `.itb`（ARM64 等）/ `.bin` 等多种固件格式
 - **SNAPSHOT 支持**：支持 SNAPSHOT 快照固件，通过修订号 `r36350` 判断新旧，文件名无修订号时回退到编译时间戳
 - **多包格式**：同时编译 `.ipk` (opkg) 和 `.apk` (apk) 两种格式，兼容 OpenWrt 23.05 及更早版本与 25.12+ 版本
+- **多语言支持**：界面文案遵循 LuCI 上游惯例，以英文作为 msgid 并接入 i18n，随独立翻译包 `luci-i18n-online-upgrade-zh-cn` 发布。英文界面显示英文，中文界面显示中文
 
 ## 使用方法
 
@@ -36,6 +37,11 @@ ImmortalWrt / OpenWrt LuCI 插件 - 从 GitHub Releases 在线升级固件。
 # 将本插件放到 openwrt/package/luci-app-online-upgrade/
 cd openwrt
 make package/luci-app-online-upgrade/compile V=s
+
+# 中文翻译是独立子包，需先选中语言再编译（make defconfig 默认不会勾选它）
+echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
+make defconfig
+make package/luci-i18n-online-upgrade-zh-cn/compile V=s
 ```
 
 ## 手动安装
@@ -43,18 +49,39 @@ make package/luci-app-online-upgrade/compile V=s
 **opkg (OpenWrt/ImmortalWrt 23.05 及更早):**
 ```bash
 opkg install luci-app-online-upgrade_1.1.1_all.ipk
+# 中文界面需额外安装翻译包
+opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 ```
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r5.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r6.apk
+# 中文界面需额外安装翻译包
+apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```
+
+> 翻译包只提供中文文案，不装也能正常使用，只是界面显示英文。
 
 ## 依赖
 
 - curl
 - jsonfilter
 - LuCI (luci-base)
+
+## 开发
+
+```bash
+# i18n 回归测试（纯 node，无第三方依赖）
+node tests/i18n.test.js
+
+# 语法检查
+node --check root/www/luci-static/resources/view/system/online-upgrade.js
+sh -n root/usr/bin/online-upgrade.sh
+```
+
+> `tests/i18n.test.js` 断言 shell 输出行在 JS 侧都能查到译文。LuCI 的 `_()` 是
+> 「精确匹配 + trim」，msgid 写错只会静默退回英文而不报错，故用测试兜住。
+> CI 会在编译前先跑这一关。
 
 ## 🌟 Star戳一戳，好运加满！😆
 > **"点过 `Star` 的朋友，颜值与智慧双双在线！✨"**

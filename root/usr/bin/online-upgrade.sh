@@ -88,16 +88,25 @@ TMP_JSON="/tmp/release.json"
 MODE="${1:-check}"
 KEEP_MODE="${2:-keep}"
 
+# 判定结果协议行（机器可读，前端依赖它决定按钮显隐与提示文案，不参与展示翻译）
+#   RESULT=new          有新固件
+#   RESULT=latest       已是最新
+#   RESULT=ratelimited  GitHub API 限速（403）
+#   RESULT=error        其它错误
+emit_result() { echo "RESULT=$1"; }
+
 echo "========================================"
-echo "  固件在线升级"
+echo "  Firmware Online Upgrade"
 if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
-    echo "  系统: ${DISTRO}  |  当前架构: ${ARCH}"
+    echo "  System: ${DISTRO}"
+    echo "  Architecture: ${ARCH}"
+elif [ "$SKIP_GITHUB" = "1" ]; then
+    echo "  Architecture: ${ARCH}"
+    echo "  Firmware image URL: ${DOWNLOAD_URL}"
 else
-    if [ "$SKIP_GITHUB" = "1" ]; then
-        echo "  当前架构: ${ARCH}  |  固件镜像下载地址: ${DOWNLOAD_URL}"
-    else
-        echo "  当前架构: ${ARCH}  |  仓库: ${REPO}  |  标签: ${TAG}"
-    fi
+    echo "  Architecture: ${ARCH}"
+    echo "  Repository: ${REPO}"
+    echo "  Tag: ${TAG}"
 fi
 echo "========================================"
 
@@ -170,7 +179,7 @@ fi
 
 # ===== 重置 =====
 if [ "$MODE" = "reset" ] || [ "$MODE" = "--reset" ]; then
-    echo "更新记录已重置。"
+    echo "Update record has been reset."
     exit 0
 fi
 
@@ -178,15 +187,15 @@ fi
 if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
     TS=$(date +%Y%m%d-%H%M%S)
     BAK="/tmp/pre-upgrade-backup-${TS}.tar.gz"
-    echo "正在创建配置备份..."
+    echo "Creating configuration backup..."
     sysupgrade -b "$BAK"
     if [ $? -eq 0 ] && [ -s "$BAK" ]; then
         cp "$BAK" "/root/pre-upgrade-backup-${TS}.tar.gz"
-        echo "备份成功: /root/pre-upgrade-backup-${TS}.tar.gz ($(du -h "$BAK" | cut -f1))"
-        echo "备份中包含 $(tar tzf "$BAK" 2>/dev/null | wc -l) 个文件"
-        echo "提示：sysupgrade 会使用 -f 参数自动恢复此备份"
+        echo "Backup created: /root/pre-upgrade-backup-${TS}.tar.gz ($(du -h "$BAK" | cut -f1))"
+        echo "Archive contains $(tar tzf "$BAK" 2>/dev/null | wc -l) files"
+        echo "Note: sysupgrade will restore this backup automatically via -f"
     else
-        echo "错误：备份失败！"
+        echo "Error: backup failed!"
         exit 1
     fi
     exit 0
@@ -198,22 +207,24 @@ if [ "$SKIP_GITHUB" = "1" ]; then
     :
 elif [ -z "$REPO" ] || [ -z "$TAG" ]; then
     echo ""
-    echo "错误：未配置 GitHub 仓库 / 标签。"
-    echo "当前系统为 ${DISTRO}，未使用默认发布源，请先配置："
+    echo "Error: GitHub repository / tag is not configured."
+    echo "Current system: ${DISTRO}"
+    echo "No default release source is used. Configure it first:"
     echo "      uci set online-upgrade.settings.repo='owner/repo'"
     echo "      uci set online-upgrade.settings.tag='your-release-tag'"
     echo "      uci commit online-upgrade"
-    echo "      或在 LuCI 页面粘贴 GitHub Release Tag 地址后点击“解析”"
+    echo "      Or paste a GitHub Release Tag URL in LuCI and click \"Parse\""
+    emit_result error
     exit 1
 fi
 
 # ===== 获取 Release 信息 =====
 if [ "$SKIP_GITHUB" = "1" ]; then
     echo ""
-    echo "[1/2] 固件镜像下载地址模式，跳过 Release 获取"
+    echo "[1/2] Firmware image URL mode, skipping release lookup"
 else
     echo ""
-    echo "[1/2] 正在获取 Release 信息..."
+    echo "[1/2] Fetching release information..."
 fi
 # 固件镜像下载地址模式跳过 GitHub API 请求，避免 repo/tag 为空导致 404
 if [ "$SKIP_GITHUB" != "1" ]; then
@@ -224,7 +235,7 @@ else
     HTTP_CODE=$(curl -sL -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
 fi
 if [ "$HTTP_CODE" = "000" ]; then
-    echo "警告：直连 GitHub API 失败，尝试通过代理..."
+    echo "Warning: direct GitHub API access failed, retrying through the proxy..."
     PROXY_API="${PROXY}${API_URL}"
     if [ -n "$GITHUB_TOKEN" ]; then
         HTTP_CODE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$PROXY_API")
@@ -233,10 +244,10 @@ if [ "$HTTP_CODE" = "000" ]; then
     fi
 fi
 if [ "$HTTP_CODE" = "403" ]; then
-    echo "警告：GitHub API 限速，等待后重试..."
+    echo "Warning: GitHub API rate limited, waiting before retry..."
     for r in 1 2 3; do
         sleep $((r * 15))
-        echo "  第${r}次重试..."
+        echo "  Retry attempt ${r}..."
         if [ -n "$GITHUB_TOKEN" ]; then
             HTTP_CODE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
         else
@@ -246,15 +257,17 @@ if [ "$HTTP_CODE" = "403" ]; then
     done
 fi
 if [ "$HTTP_CODE" = "403" ]; then
-    echo "错误：GitHub API 访问超60次/小时受限（HTTP 403）"
-    echo "请等待1小时后重试，或配置 github_token 提高限制到 5000次/小时"
-    echo "      uci set online-upgrade.settings.github_token='你的token'"
+    echo "Error: GitHub API rate limit exceeded (60 requests/hour, HTTP 403)"
+    echo "Wait an hour and retry, or set github_token to raise the limit to 5000/hour"
+    echo "      uci set online-upgrade.settings.github_token='your-token'"
     echo "      uci commit online-upgrade"
     rm -f "$TMP_JSON"
+    emit_result ratelimited
     exit 1
 elif [ "$HTTP_CODE" != "200" ]; then
-    echo "错误：GitHub API 返回 HTTP $HTTP_CODE"
+    echo "Error: GitHub API returned HTTP $HTTP_CODE"
     rm -f "$TMP_JSON"
+    emit_result error
     exit 1
 fi
 fi
@@ -263,7 +276,7 @@ fi
 if [ "$SKIP_GITHUB" != "1" ]; then
 # 兼容多种固件格式：*.img.gz / *.img / *.itb（ARM64 等）/ *.bin（部分厂商）
 echo ""
-echo "[2/2] 正在查找最新固件..."
+echo "[2/2] Looking for the latest firmware..."
 FILE_NAMES=$(cat "$TMP_JSON" | jsonfilter -e "@.assets[*].name")
 
 pick_file() {
@@ -301,9 +314,10 @@ pick_file() {
 # 取出选中文件名（已去 CR/尾部空白；head -1 兜底保证单行，避免重复行污染）
 FILE_NAME=$(pick_file "$FILE_NAMES" | tr -d '\r' | sed 's/[[:space:]]*$//' | head -1)
 if [ -z "$FILE_NAME" ]; then
-    echo "错误：未找到匹配的固件文件"
-    echo "提示：可在“高级配置→固件匹配”中自定义匹配模式"
+    echo "Error: no matching firmware file found"
+    echo "Hint: customize the match pattern in \"Advanced settings -> Firmware pattern\""
     rm -f "$TMP_JSON"
+    emit_result error
     exit 1
 fi
 
@@ -325,9 +339,10 @@ ASSET_UPDATED_LOCAL=$(utc_to_local "$ASSET_UPDATED")
 
 # 校验下载 URL 是否解析成功（上次故障根因：URL 为空导致下载到 1797 字节垃圾文件）
 if [ -z "$DOWNLOAD_URL" ]; then
-    echo "错误：未能解析固件下载地址（jsonfilter 取不到 browser_download_url）"
-    echo "提示：固件文件名为 \"${FILE_NAME}\"，请确认该 Release 确实包含此文件"
+    echo "Error: could not resolve the firmware download URL (jsonfilter found no browser_download_url)"
+    echo "Hint: firmware file name is \"${FILE_NAME}\"; make sure the release really contains it"
     rm -f "$TMP_JSON"
+    emit_result error
     exit 1
 fi
 fi
@@ -335,8 +350,7 @@ fi
 # 直链模式默认值补全
 if [ "$SKIP_GITHUB" = "1" ]; then
     [ -z "$ASSET_UPDATED_LOCAL" ] && ASSET_UPDATED_LOCAL="$(date +"%Y-%m-%d %H:%M:%S")"
-    [ -z "$ASSET_SIZE" ] && ASSET_SIZE="未知,信息无法获取"
-    # 确保 DOWNLOAD_URL 已设为 FULL_URL 用于后续下载
+    # ASSET_SIZE 保持为空：大小未知时展示层直接省略 "File size" 行，避免引入哨兵字符串
     :
 fi
 
@@ -368,7 +382,10 @@ LAST_TS="$(uci -q get online-upgrade.settings.last_upgrade_ts 2>/dev/null)"
 LAST_VERSION="$(uci -q get online-upgrade.settings.last_upgrade_version 2>/dev/null)"
 
 NEW_FIRMWARE=0
-UPDATE_REASON=""
+# 判定依据以「稳定码|参数1|参数2」形式输出（协议串），展示文案由前端按码渲染，
+# 这样 shell 无需关心语言，新增语言也不用改脚本。
+REASON_CODE=""
+REASON_ARGS=""
 
 # 是否 SNAPSHOT 快照固件（无稳定版本号，改用修订号/时间戳判断新旧）
 IS_SNAPSHOT=0
@@ -383,62 +400,76 @@ FW_REV_NUM="$(extract_revision "$FILE_NAME")"
 # 判断是否有新固件
 if [ -z "$LAST_TS" ] && [ -z "$LAST_VERSION" ]; then
     NEW_FIRMWARE=1
-    UPDATE_REASON="首次检测"
+    REASON_CODE="first_check"
 elif [ "$IS_SNAPSHOT" = "1" ]; then
     # SNAPSHOT：优先用修订号数值比较，缺失/相等则回退到编译时间戳
     if [ -n "$CURRENT_REV_NUM" ] && [ -n "$FW_REV_NUM" ] && [ "$FW_REV_NUM" -gt "$CURRENT_REV_NUM" ] 2>/dev/null; then
         NEW_FIRMWARE=1
-        UPDATE_REASON="新版 SNAPSHOT（r${FW_REV_NUM} > r${CURRENT_REV_NUM}）"
+        REASON_CODE="new_snapshot"
+        REASON_ARGS="${FW_REV_NUM}|${CURRENT_REV_NUM}"
     elif [ "$ASSET_UPDATED" != "$LAST_TS" ] 2>/dev/null; then
         NEW_FIRMWARE=1
-        UPDATE_REASON="新版 SNAPSHOT（编译时间 ${ASSET_UPDATED_LOCAL}）"
+        REASON_CODE="snapshot_time"
+        REASON_ARGS="${ASSET_UPDATED_LOCAL}"
     else
-        UPDATE_REASON="已是最新 SNAPSHOT"
+        REASON_CODE="latest_snapshot"
     fi
 elif [ "$FW_VERSION_RELEASE" != "0" ] && [ "$CURRENT_RELEASE" != "$FW_VERSION_RELEASE" ]; then
     # 基于版本号比较
     if is_newer_version "$CURRENT_RELEASE" "$FW_VERSION_RELEASE"; then
         NEW_FIRMWARE=1
-        UPDATE_REASON="新版固件 v${FW_VERSION_RELEASE}（当前 v${CURRENT_RELEASE}）"
+        REASON_CODE="new_version"
+        REASON_ARGS="${FW_VERSION_RELEASE}|${CURRENT_RELEASE}"
     elif [ -n "$LAST_VERSION" ] && [ "$LAST_VERSION" != "$FW_VERSION_RELEASE" ]; then
         # 记录的版本号不同但当前已是此版本—可能是重新编译
         NEW_FIRMWARE=1
-        UPDATE_REASON="固件重新编译（v${FW_VERSION_RELEASE}）"
+        REASON_CODE="recompiled"
+        REASON_ARGS="${FW_VERSION_RELEASE}"
     else
-        UPDATE_REASON="已是最新（v${CURRENT_RELEASE}）"
+        REASON_CODE="latest"
+        REASON_ARGS="${CURRENT_RELEASE}"
     fi
 elif [ "$ASSET_UPDATED" != "$LAST_TS" ] 2>/dev/null; then
     # 版本号相同但时间戳不同—重新编译
     NEW_FIRMWARE=1
-    UPDATE_REASON="固件重新编译（${ASSET_UPDATED_LOCAL}）"
+    REASON_CODE="recompiled_time"
+    REASON_ARGS="${ASSET_UPDATED_LOCAL}"
 else
-    UPDATE_REASON="已是最新"
+    REASON_CODE="up_to_date"
 fi
 
 # ===== 显示信息 =====
 CURRENT_ID=$(grep "DISTRIB_ID" /etc/openwrt_release 2>/dev/null | cut -d"'" -f2)
 echo ""
 echo "============================================"
-echo "  固件状态"
+echo "  Firmware Status"
 echo "============================================"
-echo "  当前固件: ${CURRENT_ID} ${CURRENT_RELEASE} (r${CURRENT_REVISION})"
-echo "  新固件版本: v${FW_VERSION_RELEASE:-N/A}"
-echo "  最新固件: ${FILE_NAME}"
-# ASSET_SIZE 在直链模式下为 "未知"（非数字），直接做算术会报 arithmetic syntax error
+echo "  Current firmware: ${CURRENT_ID} ${CURRENT_RELEASE} (r${CURRENT_REVISION})"
+echo "  New firmware version: v${FW_VERSION_RELEASE:-N/A}"
+echo "  Latest firmware: ${FILE_NAME}"
+# ASSET_SIZE 在直链模式下为空（非数字），直接做算术会报 arithmetic syntax error；
+# 大小不可知时整行省略，前端据此不显示后缀（不再使用哨兵字符串）
 case "$ASSET_SIZE" in
-    ''|*[!0-9]*) SIZE_DISPLAY="${ASSET_SIZE:-未知,信息无法获取}" ;;
+    ''|*[!0-9]*) SIZE_DISPLAY="" ;;
     *)           SIZE_DISPLAY="$(printf "%.0f MB" $((ASSET_SIZE / 1024 / 1024)))" ;;
 esac
-echo "  文件大小: ${SIZE_DISPLAY}"
-echo "  编译时间: ${ASSET_UPDATED_LOCAL}"
-echo "  检测依据: ${UPDATE_REASON}"
+[ -n "$SIZE_DISPLAY" ] && echo "  File size: ${SIZE_DISPLAY}"
+echo "  Build time: ${ASSET_UPDATED_LOCAL}"
+echo "  Reason: ${REASON_CODE}|${REASON_ARGS}"
 echo "============================================"
-[ "$NEW_FIRMWARE" = "1" ] && echo "" && echo "  >>> 发现新固件！"
+[ "$NEW_FIRMWARE" = "1" ] && echo "" && echo "  >>> New firmware available!"
+
+# 判定结果协议行：前端据此决定按钮显隐（new / latest）
+if [ "$NEW_FIRMWARE" = "1" ]; then
+    emit_result new
+else
+    emit_result latest
+fi
 
 # ===== 非升级模式直接退出 =====
 if [ "$MODE" != "upgrade" ] && [ "$MODE" != "--upgrade" ]; then
     echo ""
-    echo "  升级: online-upgrade.sh upgrade"
+    echo "  Upgrade: online-upgrade.sh upgrade"
     exit 0
 fi
 
@@ -447,7 +478,7 @@ fi
 # ====================================================================
 echo ""
 echo "============================================"
-echo "  [执行升级]"
+echo "  [Running upgrade]"
 echo "============================================"
 
 # 初始化状态文件
@@ -456,13 +487,13 @@ echo "backing_up" > /tmp/online-upgrade-status
 # ---- Step 1: 下载固件 ----
 FULL_URL="${PROXY}${DOWNLOAD_URL}"
 echo ""
-echo "Step 1: 下载固件..."
+echo "Step 1: Downloading firmware..."
 DOWNLOAD_SKIP=0
 # 仅当已知编译时间戳且缓存文件存在时才考虑跳过（避免 ASSET_UPDATED 为空时误跳过）
 if [ -n "$ASSET_UPDATED" ] && [ -f "$TMP_FIRMWARE" ] && [ -f "${TMP_FIRMWARE}.ts" ]; then
     LOCAL_TS=$(cat "${TMP_FIRMWARE}.ts")
     if [ "$LOCAL_TS" = "$ASSET_UPDATED" ]; then
-        echo "  固件已下载，跳过（${ASSET_UPDATED_LOCAL}）"
+        echo "  Firmware already downloaded, skipping (${ASSET_UPDATED_LOCAL})"
         DOWNLOAD_SKIP=1
     fi
 fi
@@ -483,40 +514,41 @@ if [ "$DOWNLOAD_SKIP" = "0" ]; then
     curl -sL -o "$TMP_FIRMWARE" "$FULL_URL" 2>&1
     CURL_EXIT=$?
     if [ "$CURL_EXIT" -ne 0 ] || [ ! -s "$TMP_FIRMWARE" ]; then
-        echo "failed:下载失败（curl exit: $CURL_EXIT）" > /tmp/online-upgrade-status
-        echo "错误：下载失败！（curl exit: $CURL_EXIT）"
+        # 协议：failed:<code>:<args>；展示文案由前端按 code 渲染
+        echo "failed:download:$CURL_EXIT" > /tmp/online-upgrade-status
+        echo "Error: download failed! (curl exit: $CURL_EXIT)"
         rm -f "$TMP_FIRMWARE"
         exit 1
     fi
     # 校验文件大小与预期一致，防止下载到错误页/被截断的假固件
-    # 仅在大小为已知数字时校验（直链模式 ASSET_SIZE 为"未知,信息无法获取"，跳过）
+    # 仅在大小为已知数字时校验（直链模式 ASSET_SIZE 为空，跳过）
     case "$ASSET_SIZE" in
         ''|*[!0-9]*) ;;
         *)
         ACTUAL_SIZE=$(wc -c < "$TMP_FIRMWARE" 2>/dev/null | tr -d ' ')
         if [ "$ACTUAL_SIZE" != "$ASSET_SIZE" ]; then
-            echo "failed:固件大小不符（预期 ${ASSET_SIZE} 字节，实际 ${ACTUAL_SIZE}）" > /tmp/online-upgrade-status
-            echo "错误：固件大小不符（预期 ${ASSET_SIZE} 字节，实际 ${ACTUAL_SIZE} 字节）"
-            echo "提示：下载可能被代理拦截或返回了错误页，请检查 PROXY 配置"
+            echo "failed:size:${ASSET_SIZE}:${ACTUAL_SIZE}" > /tmp/online-upgrade-status
+            echo "Error: firmware size mismatch (expected ${ASSET_SIZE} bytes, got ${ACTUAL_SIZE} bytes)"
+            echo "Hint: the download may have been intercepted by the proxy or returned an error page; check the PROXY setting"
             rm -f "$TMP_FIRMWARE"
             exit 1
         fi
         ;;
     esac
     echo "$ASSET_UPDATED" > "${TMP_FIRMWARE}.ts"
-    echo "  下载成功 ($(du -h "$TMP_FIRMWARE" | cut -f1))"
+    echo "  Download complete ($(du -h "$TMP_FIRMWARE" | cut -f1))"
     echo "downloaded" > /tmp/online-upgrade-status
 fi
 
 # ---- Step 2: 记录版本信息到 UCI（备份前，确保备份含版本记录）----
 echo ""
-echo "Step 2: 记录固件版本..."
+echo "Step 2: Recording firmware version..."
 echo "saving_ts" > /tmp/online-upgrade-status
 uci set online-upgrade.settings.last_upgrade_ts="$ASSET_UPDATED"
 uci set online-upgrade.settings.last_upgrade_version="${FW_VERSION_RELEASE:-0}"
 uci commit online-upgrade
 sync
-echo "  已记录版本: v${FW_VERSION_RELEASE:-N/A} (${ASSET_UPDATED_LOCAL})"
+echo "  Recorded version: v${FW_VERSION_RELEASE:-N/A} (${ASSET_UPDATED_LOCAL})"
 
 # ---- Step 3: 创建 sysupgrade 备份（传给 -f 参数）----
 TS=$(date +%Y%m%d-%H%M%S)
@@ -524,19 +556,19 @@ BACKUP_TMP="/tmp/pre-upgrade-backup-${TS}.tar.gz"
 BACKUP_ROOT="/root/pre-upgrade-backup-${TS}.tar.gz"
 if [ "$KEEP_MODE" = "keep" ]; then
     echo ""
-    echo "Step 3: 创建 sysupgrade 配置备份..."
+    echo "Step 3: Creating sysupgrade configuration backup..."
     sysupgrade -b "$BACKUP_TMP"
     if [ $? -ne 0 ] || [ ! -s "$BACKUP_TMP" ]; then
-        echo "错误：配置备份失败！"
+        echo "Error: configuration backup failed!"
         exit 1
     fi
     # 同时保存到 /root/ 作为应急副本
     cp "$BACKUP_TMP" "$BACKUP_ROOT"
-    echo "  备份成功: ${BACKUP_ROOT} ($(du -h "$BACKUP_TMP" | cut -f1))"
-    echo "  备份中包含 $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) 个文件"
+    echo "  Backup created: ${BACKUP_ROOT} ($(du -h "$BACKUP_TMP" | cut -f1))"
+    echo "  Archive contains $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) files"
 else
     echo ""
-    echo "Step 3: 创建本插件最小备份（干净升级模式，系统配置不保留）..."
+    echo "Step 3: Creating a minimal backup of this plugin only (clean upgrade, system config not kept)..."
     # 从包管理器查询本插件的全部已安装文件，打成最小归档
     PKG_FILES=$(apk info -L luci-app-online-upgrade 2>/dev/null | grep '^/' || opkg files luci-app-online-upgrade 2>/dev/null | grep '^/')
     # 兜底：包管理器查询失败时使用已知文件清单
@@ -575,7 +607,7 @@ if command -v apk >/dev/null 2>&1; then
 	if ! apk info -e luci-app-online-upgrade >/dev/null 2>&1 && [ -s /etc/online-upgrade-pkgdb/apk-installed ]; then
 		cat /etc/online-upgrade-pkgdb/apk-installed >> /lib/apk/db/installed
 		echo "" >> /lib/apk/db/installed
-		logger -t "online-upgrade" "已恢复 apk 包注册信息"
+		logger -t "online-upgrade" "Restored apk package registration"
 	fi
 elif command -v opkg >/dev/null 2>&1; then
 	if ! opkg status luci-app-online-upgrade 2>/dev/null | grep -q '^Status:.*installed'; then
@@ -585,7 +617,7 @@ elif command -v opkg >/dev/null 2>&1; then
 		}
 		mkdir -p /usr/lib/opkg/info
 		cp /etc/online-upgrade-pkgdb/opkg-info/* /usr/lib/opkg/info/ 2>/dev/null
-		logger -t "online-upgrade" "已恢复 opkg 包注册信息"
+		logger -t "online-upgrade" "Restored opkg package registration"
 	fi
 fi
 rm -rf /etc/online-upgrade-pkgdb
@@ -595,38 +627,38 @@ EOF
     EXISTING_FILES="$EXISTING_FILES /etc/online-upgrade-pkgdb /etc/uci-defaults/92-online-upgrade-register"
     ( cd / && tar czf $BACKUP_TMP $EXISTING_FILES 2>/dev/null )
     if [ $? -ne 0 ] || [ ! -s "$BACKUP_TMP" ]; then
-        echo "错误：插件备份失败！"
+        echo "Error: plugin backup failed!"
         exit 1
     fi
-    echo "  备份成功: $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) 个插件文件"
+    echo "  Backup created: $(tar tzf "$BACKUP_TMP" 2>/dev/null | wc -l) plugin files"
 fi
 
 # ---- Step 4: 执行 sysupgrade
 echo ""
 if [ "$KEEP_MODE" = "keep" ]; then
-    echo "Step 4: 执行 sysupgrade（自动恢复配置）..."
+    echo "Step 4: Running sysupgrade (configuration will be restored automatically)..."
 else
-    echo "Step 4: 执行 sysupgrade（干净升级，仅保留本插件）..."
+    echo "Step 4: Running sysupgrade (clean upgrade, plugin only)..."
 fi
 echo "sysupgrade" > /tmp/online-upgrade-status
 sync
 sleep 1
 
 # ---- 保存包列表（用于升级后自动重装）----
-echo "  正在保存已安装包列表..."
+echo "  Saving the installed package list..."
 apk info 2>/dev/null > /root/.pkg-list.txt
 sync
 
 if [ "$KEEP_MODE" = "keep" ]; then
-    echo "  命令: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
+    echo "  Command: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
     /sbin/sysupgrade -f "$BACKUP_TMP" "$TMP_FIRMWARE"
 else
-    echo "  命令: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
+    echo "  Command: sysupgrade -f ${BACKUP_TMP} ${TMP_FIRMWARE}"
     /sbin/sysupgrade -f "$BACKUP_TMP" "$TMP_FIRMWARE"
 fi
 
 # 如果 sysupgrade 失败（返回了），清除记录避免误判
-echo "错误：sysupgrade 执行失败！" >> /tmp/online-upgrade.log
+echo "Error: sysupgrade execution failed!" >> /tmp/online-upgrade.log
 uci -q delete online-upgrade.settings.last_upgrade_ts
 uci -q delete online-upgrade.settings.last_upgrade_version
 uci commit online-upgrade

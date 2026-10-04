@@ -11,7 +11,7 @@ cat > "$TMPFILE" 2>/dev/null
 if [ ! -s "$TMPFILE" ]; then
 	echo "Content-Type: text/plain; charset=utf-8"
 	echo ""
-	echo "ERROR:未收到文件数据"
+	echo "ERROR:No file data received"
 	rm -f "$TMPFILE"
 	exit 0
 fi
@@ -20,7 +20,7 @@ fi
 if ! gzip -t "$TMPFILE" 2>/dev/null; then
 	echo "Content-Type: text/plain; charset=utf-8"
 	echo ""
-	echo "ERROR:上传文件不是有效的 gzip 格式"
+	echo "ERROR:Uploaded file is not a valid gzip archive"
 	rm -f "$TMPFILE"
 	exit 0
 fi
@@ -33,9 +33,9 @@ rm -f "$TMPFILE"
 if [ $RV -eq 0 ]; then
 	echo "Content-Type: text/plain; charset=utf-8"
 	echo ""
-	echo "OK:配置已从上传的备份文件恢复，建议重启路由器使配置生效"
+	echo "OK:Configuration restored from the uploaded backup. Reboot the router to apply it."
 else
 	echo "Content-Type: text/plain; charset=utf-8"
 	echo ""
-	echo "ERROR:配置恢复失败，备份文件可能已损坏"
+	echo "ERROR:Restore failed; the backup file may be corrupted"
 fi
