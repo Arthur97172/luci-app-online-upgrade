@@ -505,6 +505,12 @@ return view.extend({
 					hint.appendChild(link);
 					if (dlBtn) dlBtn.style.display = 'inline-block';
 				} else {
+					// 没有 /root/pre-upgrade-backup-*.tar.gz 时，必须同步清掉上一次的提示与下载按钮：
+					// download 端点（online_upgrade.lua 的 action_download）只认这个 glob，文件不存在
+					// 会返回 404，残留的绿色提示和按钮都只会点到 404。
+					// 两者都必须在发起异步查询之前执行，否则回调返回前界面仍停留在旧状态。
+					hint.textContent = '';
+					if (dlBtn) dlBtn.style.display = 'none';
 					fs.exec('/bin/sh', ['-c', 'date -r /etc/config/sysupgrade.tgz 2>/dev/null || echo ""']).then(function(r2) {
 						var ts2 = (r2.stdout || '').trim();
 						if (ts2) {
@@ -555,17 +561,29 @@ return view.extend({
 			fileInput.click();
 		}
 
+		// 备份分布在两处：/root/ 是用户可见、可下载的那份，/tmp/ 是临时副本。
+		// 但 /tmp 的那份在升级刷写阶段正被 sysupgrade -f 占用（keep 与 clean 两种模式
+		// 用的都是 /tmp 这份），此刻删掉会把正在进行的刷写直接打断。
+		// 所以 /tmp 的清理要跳过 saving_ts / sysupgrade 两个状态；列表与删除共用同一
+		// 判据，保证确认框里列出的就是要删的。
+		var BACKUP_LIST_CMD = 'ls /root/pre-upgrade-backup-*.tar.gz 2>/dev/null; ' +
+			'case "$(cat /tmp/online-upgrade-status 2>/dev/null)" in saving_ts|sysupgrade) ;; *) ls /tmp/pre-upgrade-backup-*.tar.gz 2>/dev/null ;; esac';
+		var BACKUP_RM_CMD = 'rm -f /root/pre-upgrade-backup-*.tar.gz; ' +
+			'case "$(cat /tmp/online-upgrade-status 2>/dev/null)" in saving_ts|sysupgrade) ;; *) rm -f /tmp/pre-upgrade-backup-*.tar.gz ;; esac; echo OK';
+
 		function deleteBackups() {
-			// 删除 /root/ 下的所有备份文件
-			fs.exec('/bin/sh', ['-c', 'ls /root/pre-upgrade-backup-*.tar.gz 2>/dev/null']).then(function(r) {
+			// 删除 /root/ 与 /tmp/ 下的所有备份文件
+			fs.exec('/bin/sh', ['-c', BACKUP_LIST_CMD]).then(function(r) {
 				var files = (r.stdout || '').trim();
 				if (!files) {
 					ui.addNotification(null, E('p', _('No backup files to delete')), 'info');
 					return;
 				}
-				var names = files.split('\n').map(function(f) { return f.split('/').pop(); });
+				// 列完整路径而非文件名：两处备份同名（同一个 TS），只显示 basename 会出现
+				// 重复行，看不出 /tmp 那份也被删了
+				var names = files.split('\n');
 				if (!confirm(_('Delete all of the following backup files?') + '\n\n' + names.join('\n') + '\n\n' + _('This cannot be undone!'))) return;
-				fs.exec('/bin/sh', ['-c', 'rm -f /root/pre-upgrade-backup-*.tar.gz && echo OK']).then(function(r2) {
+				fs.exec('/bin/sh', ['-c', BACKUP_RM_CMD]).then(function(r2) {
 					var ok = (r2.stdout || '').indexOf('OK') >= 0;
 					updateOutput(ok ? fmt(_('✅ Deleted %s backup file(s)'), [names.length]) + '\n' : _('❌ Failed to delete the backup files') + '\n');
 					if (ok) {

@@ -193,6 +193,9 @@ if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
         cp "$BAK" "/root/pre-upgrade-backup-${TS}.tar.gz"
         echo "Backup created: /root/pre-upgrade-backup-${TS}.tar.gz ($(du -h "$BAK" | cut -f1))"
         echo "Archive contains $(tar tzf "$BAK" 2>/dev/null | wc -l) files"
+        # 先落 /tmp 再拷到 /root 是为了原子性（-s 判空，半截归档不会进 /root）；
+        # 拷完必须删掉 /tmp 的暂存件，否则每建一次备份就在 tmpfs 里留一份永不回收的副本。
+        rm -f "$BAK"
         echo "Note: sysupgrade will restore this backup automatically via -f"
     else
         echo "Error: backup failed!"
