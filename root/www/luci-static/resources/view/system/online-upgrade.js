@@ -777,7 +777,7 @@ return view.extend({
 					E('input', {id: 'cfg-repo', type: 'hidden'}),
 					E('input', {id: 'cfg-tag', type: 'hidden'})
 				]),
-				E('div', {style: 'font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, _("Note: the firmware image URL takes priority over the GitHub Release Tag URL. In direct-URL mode the version is not checked - use \"Force Update\" to flash directly. A GitHub Release Tag URL must be parsed with \"Parse\", and both take effect only after \"Save Configuration\".")),
+				E('div', {style: 'margin-top:8px;font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, _("Note: the firmware image URL takes priority over the GitHub Release Tag URL. In direct-URL mode the version is not checked - use \"Force Update\" to flash directly. A GitHub Release Tag URL must be parsed with \"Parse\", and both take effect only after \"Save Configuration\".")),
 				E('div', {style: 'margin-top:14px;text-align:right;'}, [
 					E('button', {class: 'btn cbi-button-save', style: 'padding:7px 20px;border-radius:4px;cursor:pointer;', click: saveCfg}, _('Save Configuration'))
 				])

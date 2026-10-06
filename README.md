@@ -53,14 +53,14 @@ make package/luci-app-online-upgrade/compile V=s
 
 **opkg (OpenWrt/ImmortalWrt 23.05 及更早):**
 ```bash
-opkg install luci-app-online-upgrade_1.1.1_all.ipk
+opkg install luci-app-online-upgrade_1.1.2-r1_all.ipk
 # 中文界面需额外安装翻译包
 opkg install luci-i18n-online-upgrade-zh-cn_*.ipk
 ```
 
 **apk (OpenWrt/ImmortalWrt 25.12+):**
 ```bash
-apk add --allow-untrusted luci-app-online-upgrade-1.1.1-r9.apk
+apk add --allow-untrusted luci-app-online-upgrade-1.1.2-r1.apk
 # 中文界面需额外安装翻译包
 apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```
