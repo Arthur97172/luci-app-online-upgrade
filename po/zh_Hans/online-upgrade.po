@@ -75,20 +75,20 @@ msgstr "保存配置"
 msgid "Parse"
 msgstr "解析"
 
-msgid "📦 Create Backup"
-msgstr "📦 创建备份"
+msgid "Create Backup"
+msgstr "创建备份"
 
 msgid "⬇ Download Backup"
 msgstr "⬇ 下载备份"
 
-msgid "🔄 Auto Restore"
-msgstr "🔄 自动恢复"
+msgid "Auto Restore"
+msgstr "自动恢复"
 
-msgid "📂 Manual Restore"
-msgstr "📂 手动恢复"
+msgid "Manual Restore"
+msgstr "手动恢复"
 
-msgid "🗑 Delete Backups"
-msgstr "🗑 删除恢复"
+msgid "Delete Backups"
+msgstr "删除备份"
 
 msgid "Reconnect Now"
 msgstr "立即重连"
@@ -293,8 +293,8 @@ msgstr "❌ 升级失败："
 msgid "Flashing complete, the router is about to reboot..."
 msgstr "刷写完成，路由器即将重启..."
 
-msgid "🔄 The router is rebooting"
-msgstr "🔄 路由器正在重启"
+msgid "The router is rebooting"
+msgstr "路由器正在重启"
 
 msgid "Firmware flashed. Do NOT power off! Waiting for the router to come online..."
 msgstr "固件刷写完成，请勿断电！正在等待路由器上线..."

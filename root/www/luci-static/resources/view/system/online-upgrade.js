@@ -276,7 +276,7 @@ return view.extend({
 				return E('a', {href: u, style: 'color:#4CAF50;margin:0 6px;'}, u.replace(/^https?:\/\//, '').replace(/\/$/, ''));
 			});
 			var overlay = E('div', {id: 'reboot-overlay', style: 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;'}, [
-				E('div', {style: 'font-size:28px;font-weight:600;margin-bottom:10px;'}, _('🔄 The router is rebooting')),
+				E('div', {style: 'font-size:28px;font-weight:600;margin-bottom:10px;'}, '🔄 ' + _('The router is rebooting')),
 				E('div', {id: 'reboot-tip', style: 'font-size:14px;color:#aaa;margin-bottom:20px;'}, _('Firmware flashed. Do NOT power off! Waiting for the router to come online...')),
 				E('div', {id: 'countdown', style: 'font-size:48px;font-weight:700;'}, String(seconds)),
 				E('div', {style: 'font-size:13px;color:#888;margin-top:8px;margin-bottom:24px;'}, _('seconds until auto-reconnect probe')),
@@ -753,11 +753,11 @@ return view.extend({
 					_('Backup & Restore')
 					]),
 					E('div', {style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;'}, [
-					E('button', {id: 'btn-backup', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #2196F3;color:#2196F3;background:transparent;', click: runBackup, title: _('Create a configuration backup under /root/')}, _('📦 Create Backup')),
+					E('button', {id: 'btn-backup', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #2196F3;color:#2196F3;background:transparent;', click: runBackup, title: _('Create a configuration backup under /root/')}, '📦 ' + _('Create Backup')),
 					E('button', {id: 'btn-download', class: 'btn cbi-button', style: 'display:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #4CAF50;color:#4CAF50;background:transparent;', click: function() { var p = window.location.pathname.match(/^\/.*\/admin/) || ['/cgi-bin/luci/admin']; var b = p[0].replace('/admin', ''); window.open(b + '/admin/system/online_upgrade/download', '_blank'); }}, _('⬇ Download Backup')),
-					E('button', {id: 'btn-auto-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: autoRestore, title: _('Restore from a backup file stored on the router')}, _('🔄 Auto Restore')),
-					E('button', {id: 'btn-manual-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #e91e63;color:#e91e63;background:transparent;', click: manualRestore, title: _('Restore from a backup file uploaded from this computer')}, _('📂 Manual Restore')),
-					E('button', {id: 'btn-delete-backups', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #f44336;color:#f44336;background:transparent;', click: deleteBackups, title: _('Delete all backup files under /root/')}, _('🗑 Delete Backups')),
+					E('button', {id: 'btn-auto-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #ff9800;color:#ff9800;background:transparent;', click: autoRestore, title: _('Restore from a backup file stored on the router')}, '🔄 ' + _('Auto Restore')),
+					E('button', {id: 'btn-manual-restore', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #e91e63;color:#e91e63;background:transparent;', click: manualRestore, title: _('Restore from a backup file uploaded from this computer')}, '📂 ' + _('Manual Restore')),
+					E('button', {id: 'btn-delete-backups', class: 'btn cbi-button', style: 'padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid #f44336;color:#f44336;background:transparent;', click: deleteBackups, title: _('Delete all backup files under /root/')}, '🗑 ' + _('Delete Backups')),
 					E('input', {id: 'manual-backup-file', type: 'file', accept: '.tar.gz,.tgz,.gz', style: 'display:none', change: handleManualBackupFile})
 					]),
 					E('div', {id: 'backup-hint', style: 'color:#999;font-size:12px;padding:4px 0;'}, _('Checking status...'))

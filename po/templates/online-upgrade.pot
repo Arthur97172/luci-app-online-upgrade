@@ -67,19 +67,19 @@ msgstr ""
 msgid "Parse"
 msgstr ""
 
-msgid "📦 Create Backup"
+msgid "Create Backup"
 msgstr ""
 
 msgid "⬇ Download Backup"
 msgstr ""
 
-msgid "🔄 Auto Restore"
+msgid "Auto Restore"
 msgstr ""
 
-msgid "📂 Manual Restore"
+msgid "Manual Restore"
 msgstr ""
 
-msgid "🗑 Delete Backups"
+msgid "Delete Backups"
 msgstr ""
 
 msgid "Reconnect Now"
@@ -274,7 +274,7 @@ msgstr ""
 msgid "Flashing complete, the router is about to reboot..."
 msgstr ""
 
-msgid "🔄 The router is rebooting"
+msgid "The router is rebooting"
 msgstr ""
 
 msgid "Firmware flashed. Do NOT power off! Waiting for the router to come online..."
