@@ -10,30 +10,30 @@
 // margin-bottom:16px 之外又叠加了 16px 的 gap，卡片之间实际空出 16 + 16 = 32px。
 //
 // 本页五处边界：
-//   标题 → 固件状态               6px   （首卡，单独一条规则）
+//   标题 → 固件状态               4px   （首卡，单独一条规则）
 //   固件状态 → 备份 & 恢复         8px
 //   备份 & 恢复 → 仓库配置         8px
 //   仓库配置 → 进度区              8px
 //   进度区 → 结果框                8px
 //
-// 8px 比卡片内联的 margin-bottom:16px 还小，靠负的上边距去凑既难读又易出意外，所以把间距的
-// 来源统一收进这里：直接子项的下边距一律清零（!important 压得过行内样式），间距全部由下一项
-// 的上边距给出。后四处取值相同，用 >*+*（「除首项外的全部直接子项」）一条覆盖；首卡紧跟在页面
-// 标题之后，另由 >h2+* 单独给 6px —— 它比 >*+* 多一个元素名，特异性 (0,2,1) 高于 (0,2,0)，
+// 4px / 8px 都比卡片内联的 margin-bottom:16px 还小，靠负的上边距去凑既难读又易出意外，所以把
+// 间距的来源统一收进这里：直接子项的下边距一律清零（!important 压得过行内样式），间距全部由
+// 下一项的上边距给出。后四处取值相同，用 >*+*（「除首项外的全部直接子项」）一条覆盖；首卡紧跟
+// 在页面标题之后，另由 >h2+* 单独给 4px —— 它比 >*+* 多一个元素名，特异性 (0,2,1) 高于 (0,2,0)，
 // 同为 !important 时由特异性决定胜负，与两条规则的先后无关。>*+* 不含首项，标题上方不会被顶开。
 //
 // 这些规则同处一个 <style>，要么整块生效要么整块不生效，不存在「只生效一半」让卡片贴在一起
 // 的情况；注入失败时退回 Argon 的原状（32px），与改动前一致。
 //
 // 块级（非 flex）主题下结果一致：row-gap 对非 flex 容器无效，而清零的下边距与各上边距在块级
-// 布局里会塌陷成二者中较大的那个 —— 后四处仍是 8px，首卡仍是 6px。唯一的差异在「标题 → 首卡」：
-// 块级下它取 max(主题的 .cbi-page-title 下边距, 6px)。Argon 自身 h2 外边距为 0（*{margin:0}
-// 全局重置），取到的就是 6px。
+// 布局里会塌陷成二者中较大的那个 —— 后四处仍是 8px，首卡仍是 4px。唯一的差异在「标题 → 首卡」：
+// 块级下它取 max(主题的 .cbi-page-title 下边距, 4px)。Argon 自身 h2 外边距为 0（*{margin:0}
+// 全局重置），取到的就是 4px。
 var MAP_CSS =
 	'.cbi-map.online-upgrade-map{row-gap:0}' +
 	'.cbi-map.online-upgrade-map>*{margin-bottom:0!important}' +
 	'.cbi-map.online-upgrade-map>*+*{margin-top:8px!important}' +
-	'.cbi-map.online-upgrade-map>h2+*{margin-top:6px!important}';
+	'.cbi-map.online-upgrade-map>h2+*{margin-top:4px!important}';
 
 function injectMapCSS() {
 	var el = document.getElementById('online-upgrade-map-css');
