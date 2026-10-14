@@ -8,29 +8,33 @@
 // （.cbi-map{display:flex;flex-direction:column;gap:1rem}）。flex 的 gap 不与子项的
 // margin 塌陷 —— 这与相邻块级元素之间 margin 会塌陷是两回事 —— 于是每张卡片内联的
 // margin-bottom:16px 之外又叠加了 16px 的 gap，卡片之间实际空出 16 + 16 = 32px。
-// 在本页自己的 map 上取消 gap，并让相邻卡片只保留前一张的下边距：卡片间距回到 16px。
-// 首张卡片补 margin-top:16px，数值取卡片自身的下边距，补回原先由 gap 提供的标题下间距，
-// 使「标题 → 首卡」仍是 16px —— 这样受影响的就只有被点名的那两处卡片间距。
 //
-// 取消 gap 会波及 gap 参与过的每一处边界，不只是被点名的那两处。地图的直接子项里，
-// 三张卡片之后还有进度区（#progress-area）与结果框（pre#upgrade-result），它们各自
-// 原本也靠 gap 拿到 16px（前一项下边距 16 + gap 16 = 32px）。这两处不在改动范围内，
-// 因此显式补上 margin-top:16px，把 16 + 16 = 32px 原样还回去 —— 它们的外观保持零变化。
-// 二者默认 display:none，不生成盒子，这两条规则在默认视图下不产生任何效果。
+// 本页五处边界的期望间距（按指定值）：
+//   标题 → 固件状态         8px
+//   固件状态 → 备份 & 恢复   12px
+//   备份 & 恢复 → 仓库配置   12px
+//   仓库配置 → 进度区       12px
+//   进度区 → 结果框         12px
 //
-// 除首张卡那条之外，其余规则在块级（非 flex）主题上都是惰性的：row-gap 对非 flex 容器无效，
-// 相邻卡片与进度区、结果框的 margin-top 本来也是 0（*{margin:0}），取消 gap 后卡片间距依旧
-// 靠 margin 塌陷得到 16px，各边界一律不变。
-// 但首张卡的 margin-top:16px 在块级布局里会与标题的下边距塌陷、取二者较大值：若某主题的
-// .cbi-page-title 下边距小于 16px，「标题 → 首卡」会由该值变为 16px。这是本页唯一一处会
-// 波及非 Argon 主题的地方 —— 方向是与卡片 16px 的节奏对齐，只会略宽，不会收窄或顶死。
-// Argon 自身 h2 外边距为 0（*{margin:0} 全局重置），不受此影响。
+// 12px 比卡片内联的 margin-bottom:16px 还小，靠负的上边距去凑既难读又易出意外，所以把间距
+// 的来源统一收进这里：直接子项的下边距一律清零（!important 压得过行内样式），间距全部由
+// 下一项的上边距给出。首卡与其余卡片取值不同（8 / 12），故用 .cbi-section 打底，再用
+// .cbi-section+.cbi-section 覆盖后面的卡片；进度区与结果框各自单列一条。
+//
+// 这些规则同处一个 <style>，要么整块生效要么整块不生效，不存在「只生效一半」让卡片贴在一起
+// 的情况；注入失败时退回 Argon 的原状（32px），与改动前一致。
+//
+// 块级（非 flex）主题下结果一致：row-gap 对非 flex 容器无效，而清零的下边距与各上边距在
+// 块级布局里会塌陷成二者中较大的那个 —— 五处边界仍是 8 / 12 / 12 / 12 / 12。唯一的差异在
+// 「标题 → 首卡」：块级下它取 max(主题的 .cbi-page-title 下边距, 8px)。Argon 自身 h2 外边距
+// 为 0（*{margin:0} 全局重置），取到的就是 8px。
 var MAP_CSS =
 	'.cbi-map.online-upgrade-map{row-gap:0}' +
-	'.cbi-map.online-upgrade-map>.cbi-section{margin-top:16px!important}' +
-	'.cbi-map.online-upgrade-map>.cbi-section+.cbi-section{margin-top:0!important}' +
-	'.cbi-map.online-upgrade-map>#progress-area{margin-top:16px!important}' +
-	'.cbi-map.online-upgrade-map>#upgrade-result{margin-top:16px!important}';
+	'.cbi-map.online-upgrade-map>*{margin-bottom:0!important}' +
+	'.cbi-map.online-upgrade-map>.cbi-section{margin-top:8px!important}' +
+	'.cbi-map.online-upgrade-map>.cbi-section+.cbi-section{margin-top:12px!important}' +
+	'.cbi-map.online-upgrade-map>#progress-area{margin-top:12px!important}' +
+	'.cbi-map.online-upgrade-map>#upgrade-result{margin-top:12px!important}';
 
 function injectMapCSS() {
 	var el = document.getElementById('online-upgrade-map-css');
