@@ -191,6 +191,9 @@ arch_hint() {
 # ===== 后台升级模式 =====
 if [ "$MODE" = "background" ] || [ "$MODE" = "--background" ] || [ "$MODE" = "--bg" ]; then
     KEEP_PASS="${2:-keep}"
+    # 先重置状态文件再 fork：GitHub 模式下子进程要先拉 Release API（可能几十秒），
+    # 期间前端轮询会读到上一次升级留下的终态（sysupgrade / failed:...）。
+    echo "starting" > /tmp/online-upgrade-status
     setsid /bin/sh "$0" "upgrade" "$KEEP_PASS" </dev/null >/tmp/online-upgrade.log 2>&1 &
     exit 0
 fi

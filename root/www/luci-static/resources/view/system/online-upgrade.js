@@ -423,18 +423,43 @@ return view.extend({
 			var sysupgradePolls = 0;
 			// 长时间未重启警告只触发一次
 			var sysupWarned = false;
-			// 路由器可能已重启：连续多次读取 status 文件失败（连接断开）
+			// 路由器可能已重启：连续多次读不到 status 文件（连接断开，或 /tmp 已清空）
 			var disconnectStreak = 0;
 			var pollFails = 0;
+			// 本次升级是否读到过任意状态
+			var sawStatus = false;
 			// 当前进度百分比（真实进度/爬升共用，只增不减）
 			var currentPct = 25;
+
+			// 失联判定：连续两次读不到状态就认定路由器正在重启/已离线。
+			// 不能要求先看到 sysupgrade —— 从 downloaded 到刷写只隔几秒，3 秒轮询完全可能
+			// 整段错过，那样 reachedSysupgrade 永远是 false，页面会永久停在下载百分比。
+			function routerLost() {
+				disconnectStreak++;
+				if (disconnectStreak < 2) return false;
+				if (!reachedSysupgrade && !sawStatus) return false;
+				clearInterval(interval);
+				clearInterval(pollTimer);
+				pollTimer = null;
+				showRebootOverlay();
+				return true;
+			}
+
 			if (pollTimer) clearInterval(pollTimer);
 			pollTimer = setInterval(function() {
 				fs.exec('/bin/cat', ['/tmp/online-upgrade-status']).then(function(r) {
+					var status = (r.stdout || '').trim();
+					if (!status) {
+						// cat 对不存在的文件返回非零退出码，但 file.exec 的 RPC 本身仍成功，
+						// 前端拿到的是空 stdout：本次升级读到过状态 → /tmp 已随重启清空，等同失联；
+						// 还没读到过任何状态 → background 进程尚未开始写，继续等。
+						if (sawStatus) routerLost();
+						return;
+					}
 					pollFails = 0;
 					// 能读到 status 说明路由器尚未重启
 					disconnectStreak = 0;
-					var status = (r.stdout || '').trim();
+					sawStatus = true;
 					if (status.indexOf('failed:') === 0) {
 						// 升级明确失败：停止轮询并显示错误
 						clearInterval(interval);
@@ -449,6 +474,9 @@ return view.extend({
 						var forceBtn = document.getElementById('btn-force');
 						if (forceBtn) forceBtn.style.display = 'inline-block';
 					} else if (status.indexOf('downloading') === 0) {
+						// 真实进度接管：停掉 5%→25% 的假进度，避免 4 秒那一跳把
+						// 已经超过 25% 的真实下载进度倒拉回去
+						clearInterval(interval);
 						// 下载阶段：按真实字节数推进 25%→55%（status 格式 downloading:总字节数）
 						var parts = status.split(':');
 						var total = parseInt(parts[1], 10);
@@ -501,20 +529,12 @@ return view.extend({
 							});
 						}
 					} else {
-						// backing_up / 空 等
+						// starting / backing_up 等过渡状态
 						sysupgradePolls = 0;
 					}
 				}).catch(function() {
 					// 读取失败：可能是路由器正在重启导致连接断开
-					disconnectStreak++;
-					if (reachedSysupgrade && disconnectStreak >= 2) {
-						clearInterval(interval);
-						clearInterval(pollTimer);
-						pollTimer = null;
-						showRebootOverlay();
-					} else {
-						pollFails++;
-					}
+					if (!routerLost()) pollFails++;
 				});
 			}, 3000);
 		}
