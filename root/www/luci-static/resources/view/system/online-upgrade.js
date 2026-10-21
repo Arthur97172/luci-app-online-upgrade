@@ -53,18 +53,26 @@ return view.extend({
 	render: function() {
 		var _this = this;
 		var pollTimer = null;
-		// 重启/IP 变更后用于探测重连的候选地址。必须在页面加载时从 UCI 取好快照——
-		// 探测发生在路由器已下线之后，那时无法再执行 uci。
+		// 重启/IP 变更后用于探测重连的候选地址。页面加载时先从 UCI 取一份快照——
+		// 探测发生在路由器已下线之后，那时无法再执行 uci。快照只作兜底：用户可能在
+		// 本次页面会话里改过「重连地址」（甚至还没保存），所以优先读输入框的当前值。
 		var reconnectHosts = '';
 		// UCI 未配置时的兜底列表（与 root/etc/config/online-upgrade 的默认值保持一致）
 		var DEFAULT_RECONNECT_HOSTS = '192.168.1.1 10.0.0.1 immortalwrt.lan openwrt.lan';
+
+		// 当前生效的重连候选：输入框 > 加载时的 UCI 快照 > 内建默认值。
+		function reconnectHostsNow() {
+			var el = document.getElementById('cfg-reconnect-hosts');
+			var v = el ? String(el.value || '').trim() : '';
+			return v || reconnectHosts || DEFAULT_RECONNECT_HOSTS;
+		}
 
 		// 构造候选 URL：当前地址始终最优先，其后是配置的候选（去重）。
 		// 协议沿用当前页面，避免 https 页面探测 http 被浏览器按混合内容拦截。
 		function buildCandidates() {
 			var proto = window.location.protocol;
 			var hosts = [window.location.host];
-			var list = (reconnectHosts || DEFAULT_RECONNECT_HOSTS).split(/[\s,]+/);
+			var list = reconnectHostsNow().split(/[\s,]+/);
 			for (var i = 0; i < list.length; i++) {
 				var h = list[i].replace(/^https?:\/\//, '').replace(/\/+$/, '');
 				if (h && hosts.indexOf(h) < 0) hosts.push(h);
@@ -708,6 +716,8 @@ return view.extend({
 			var g = function(id) { return (document.getElementById(id) || {}).value || ''; };
 			var cmd = "uci set online-upgrade.settings.repo='" + g('cfg-repo').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.tag='" + g('cfg-tag').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.direct_url='" + g('cfg-direct-url').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.proxy='" + g('cfg-proxy').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.reconnect_hosts='" + g('cfg-reconnect-hosts').replace(/'/g,"'\\''") + "' && uci commit online-upgrade";
 			fs.exec('/bin/sh', ['-c', cmd]).then(function() {
+				// 保存成功后刷新快照：用户随后清空输入框，探测仍应使用刚保存的地址。
+				reconnectHosts = reconnectHostsNow();
 				ui.addNotification(null, E('p', _('Configuration saved')), 'info');
 			});
 		}
@@ -738,11 +748,32 @@ return view.extend({
 					if (tagEl && tagEl.value === 'tag') tagEl.value = '';
 				}
 			});
-			// 取重连候选地址快照（必须在路由器下线前读好——下线后无法再执行 uci）
-			fs.exec('/bin/sh', ['-c', 'uci -q get online-upgrade.settings.reconnect_hosts 2>/dev/null']).then(function(r) {
-				reconnectHosts = (r.stdout || '').trim() || DEFAULT_RECONNECT_HOSTS;
-				var el = document.getElementById('cfg-reconnect-hosts');
-				if (el) el.value = reconnectHosts;
+			// 载入已保存的配置。此前只取重连地址：repo/tag/direct_url/proxy 的输入框
+			// 始终是空的，用户哪怕只改重连地址再点「保存配置」，也会把 UCI 里已有的值
+			// （包括默认下载代理）一并覆盖成空串。
+			// 重连地址必须在路由器下线前读好——下线后无法再执行 uci。
+			fs.exec('/bin/sh', ['-c',
+				'echo "repo=$(uci -q get online-upgrade.settings.repo)"\n' +
+				'echo "tag=$(uci -q get online-upgrade.settings.tag)"\n' +
+				'echo "direct_url=$(uci -q get online-upgrade.settings.direct_url)"\n' +
+				'echo "proxy=$(uci -q get online-upgrade.settings.proxy)"\n' +
+				'echo "hosts=$(uci -q get online-upgrade.settings.reconnect_hosts)"'
+			]).then(function(r) {
+				var cfg = {};
+				(r.stdout || '').split('\n').forEach(function(line) {
+					var p = line.indexOf('=');
+					if (p > 0) cfg[line.slice(0, p)] = line.slice(p + 1);
+				});
+				function fill(id, v) {
+					var el = document.getElementById(id);
+					if (el) el.value = v || '';
+				}
+				fill('cfg-repo', cfg.repo);
+				fill('cfg-tag', cfg.tag);
+				fill('cfg-direct-url', cfg.direct_url);
+				fill('cfg-proxy', cfg.proxy);
+				fill('cfg-reconnect-hosts', cfg.hosts);
+				reconnectHosts = (cfg.hosts || '').trim() || DEFAULT_RECONNECT_HOSTS;
 			});
 			refreshBackupInfo();
 		}, 100);
