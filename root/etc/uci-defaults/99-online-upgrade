@@ -5,7 +5,7 @@ uci -q batch <<-EOF
 	set online-upgrade.settings.repo='owner/repo'
 	set online-upgrade.settings.tag='tag'
 	set online-upgrade.settings.proxy='https://ghfast.top/'
-	set online-upgrade.settings.proxy_enabled='1'
+	set online-upgrade.settings.proxy_enabled='0'
 	set online-upgrade.settings.firmware_pattern='auto'
 	set online-upgrade.settings.keep_config='1'
 	set online-upgrade.settings.last_upgrade_version='0'

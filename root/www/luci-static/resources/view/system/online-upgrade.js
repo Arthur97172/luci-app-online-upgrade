@@ -834,11 +834,10 @@ return view.extend({
 				fill('cfg-tag', cfg.tag);
 				fill('cfg-direct-url', cfg.direct_url);
 				fill('cfg-proxy', cfg.proxy);
-				// 旧版配置没有 proxy_enabled：代理非空即视为启用（与脚本侧的兼容判断一致）
+				// 默认关闭：只有显式保存过 proxy_enabled=1 才勾选；缺键或旧配置一律不勾选
 				var proxyCb = document.getElementById('cfg-proxy-enabled');
 				if (proxyCb) {
-					proxyCb.checked = cfg.proxy_enabled === '1' ||
-						(cfg.proxy_enabled !== '0' && (cfg.proxy || '').trim() !== '');
+					proxyCb.checked = cfg.proxy_enabled === '1';
 					syncProxyUI();
 				}
 				fill('cfg-reconnect-hosts', cfg.hosts);

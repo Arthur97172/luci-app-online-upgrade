@@ -61,9 +61,9 @@ fi
 # 下载代理开关：
 #   proxy_enabled=1 且代理非空 → 启用，GitHub API 与固件下载都走代理
 #   proxy_enabled=0 或代理为空 → 不启用，全部直连
-# 旧版配置没有 proxy_enabled 键：按「代理非空即启用」兼容。
+# 默认关闭：旧版配置没有 proxy_enabled 键时一律视为未启用（与页面复选框一致）。
 if [ -z "$PROXY_ENABLED" ]; then
-    if [ -n "$PROXY" ]; then PROXY_ENABLED=1; else PROXY_ENABLED=0; fi
+    PROXY_ENABLED=0
 fi
 if [ "$PROXY_ENABLED" != "1" ] || [ -z "$PROXY" ]; then
     PROXY_ENABLED=0
