@@ -106,6 +106,9 @@ msgstr ""
 msgid "Download proxy (optional)"
 msgstr ""
 
+msgid "Enable proxy"
+msgstr ""
+
 msgid "Reconnect addresses"
 msgstr ""
 
@@ -418,6 +421,12 @@ msgstr ""
 msgid "Invalid URL format"
 msgstr ""
 
+msgid "Please enter the download proxy URL"
+msgstr ""
+
+msgid "Invalid proxy URL"
+msgstr ""
+
 msgid "Configuration saved"
 msgstr ""
 
@@ -457,7 +466,7 @@ msgstr ""
 msgid "[1/2] Fetching release information..."
 msgstr ""
 
-msgid "Warning: direct GitHub API access failed, retrying through the proxy..."
+msgid "Warning: request through the proxy failed (HTTP %s), retrying directly..."
 msgstr ""
 
 msgid "Warning: GitHub API rate limited, waiting before retry..."

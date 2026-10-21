@@ -18,6 +18,7 @@ get_uci() { uci -q get "online-upgrade.settings.$1" 2>/dev/null; }
 REPO="$(get_uci repo)"
 TAG="$(get_uci tag)"
 DIRECT_URL="$(get_uci direct_url)"
+PROXY_ENABLED="$(get_uci proxy_enabled)"
 PROXY="$(get_uci proxy)"
 FW_PATTERN="$(get_uci firmware_pattern)"
 KEEP_CONFIG="$(get_uci keep_config)"
@@ -57,8 +58,33 @@ else
     [ -z "$REPO" ] && REPO=""
     [ -z "$TAG" ] && TAG=""
 fi
-[ -z "$PROXY" ] && PROXY="https://ghfast.top/"
+# 下载代理开关：
+#   proxy_enabled=1 且代理非空 → 启用，GitHub API 与固件下载都走代理
+#   proxy_enabled=0 或代理为空 → 不启用，全部直连
+# 旧版配置没有 proxy_enabled 键：按「代理非空即启用」兼容。
+if [ -z "$PROXY_ENABLED" ]; then
+    if [ -n "$PROXY" ]; then PROXY_ENABLED=1; else PROXY_ENABLED=0; fi
+fi
+if [ "$PROXY_ENABLED" != "1" ] || [ -z "$PROXY" ]; then
+    PROXY_ENABLED=0
+    PROXY=""
+else
+    # 前缀式代理必须带结尾斜杠，否则拼接后变成 https://proxyhttps://...
+    case "$PROXY" in
+        */) ;;
+        *) PROXY="${PROXY}/" ;;
+    esac
+fi
 [ -z "$FW_PATTERN" ] && FW_PATTERN="auto"
+
+# 按代理开关拼接下载地址：启用时前缀代理（直链与 Release 资产一致），否则原样返回
+full_url() {
+    if [ -n "$PROXY" ]; then
+        printf '%s%s' "$PROXY" "$1"
+    else
+        printf '%s' "$1"
+    fi
+}
 
 # 直链模式：优先级高于 GitHub repo/tag
 SKIP_GITHUB=0
@@ -67,15 +93,7 @@ if [ -n "$DIRECT_URL" ]; then
     DOWNLOAD_URL="$DIRECT_URL"
     # 去掉查询参数取文件名
     FILE_NAME="$(basename "${DOWNLOAD_URL%%\?*}")"
-    # 绝对 URL 不自动拼接代理；相对路径才拼接
-    case "$DOWNLOAD_URL" in
-        http://*|https://*)
-            FULL_URL="$DOWNLOAD_URL"
-            ;;
-        *)
-            FULL_URL="${PROXY}${DOWNLOAD_URL}"
-            ;;
-    esac
+    FULL_URL="$(full_url "$DOWNLOAD_URL")"
     # 直链模式下版本信息为空，check 直接提示
     ASSET_UPDATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     ASSET_SIZE=""
@@ -232,30 +250,33 @@ fi
 # 固件镜像下载地址模式跳过 GitHub API 请求，避免 repo/tag 为空导致 404
 if [ "$SKIP_GITHUB" != "1" ]; then
 GITHUB_TOKEN="$(uci -q get online-upgrade.settings.github_token 2>/dev/null)"
-if [ -n "$GITHUB_TOKEN" ]; then
-    HTTP_CODE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
-else
-    HTTP_CODE=$(curl -sL -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
-fi
-if [ "$HTTP_CODE" = "000" ]; then
-    echo "Warning: direct GitHub API access failed, retrying through the proxy..."
-    PROXY_API="${PROXY}${API_URL}"
+fetch_api() {
     if [ -n "$GITHUB_TOKEN" ]; then
-        HTTP_CODE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$PROXY_API")
+        curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$1"
     else
-        HTTP_CODE=$(curl -sL -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$PROXY_API")
+        curl -sL -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$1"
     fi
+}
+# 启用代理时优先走代理；代理不认 api.github.com（常见地返回 403/404）时回退直连，
+# 避免「代理只支持 github.com 下载、不支持 API」把检查更新彻底卡死。
+if [ -n "$PROXY" ]; then
+    HTTP_CODE=$(fetch_api "${PROXY}${API_URL}")
+    EFFECTIVE_API_URL="${PROXY}${API_URL}"
+    if [ "$HTTP_CODE" != "200" ]; then
+        echo "Warning: request through the proxy failed (HTTP ${HTTP_CODE}), retrying directly..."
+        HTTP_CODE=$(fetch_api "$API_URL")
+        EFFECTIVE_API_URL="$API_URL"
+    fi
+else
+    HTTP_CODE=$(fetch_api "$API_URL")
+    EFFECTIVE_API_URL="$API_URL"
 fi
 if [ "$HTTP_CODE" = "403" ]; then
     echo "Warning: GitHub API rate limited, waiting before retry..."
     for r in 1 2 3; do
         sleep $((r * 15))
         echo "  Retry attempt ${r}..."
-        if [ -n "$GITHUB_TOKEN" ]; then
-            HTTP_CODE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
-        else
-            HTTP_CODE=$(curl -sL -H "User-Agent: curl/online-upgrade" -o "$TMP_JSON" -w "%{http_code}" "$API_URL")
-        fi
+        HTTP_CODE=$(fetch_api "$EFFECTIVE_API_URL")
         [ "$HTTP_CODE" = "200" ] && break
     done
 fi
@@ -488,7 +509,7 @@ echo "============================================"
 echo "backing_up" > /tmp/online-upgrade-status
 
 # ---- Step 1: 下载固件 ----
-FULL_URL="${PROXY}${DOWNLOAD_URL}"
+FULL_URL="$(full_url "$DOWNLOAD_URL")"
 echo ""
 echo "Step 1: Downloading firmware..."
 DOWNLOAD_SKIP=0

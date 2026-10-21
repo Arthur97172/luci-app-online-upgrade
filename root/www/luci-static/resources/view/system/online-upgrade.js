@@ -154,6 +154,8 @@ return view.extend({
 			[/^URL: (.+)$/,                             _('URL: %s')],
 			[/^Current system: (.+)$/,                  _('Current system: %s')],
 			[/^Error: GitHub API returned HTTP (.+)$/,  _('Error: GitHub API returned HTTP %s')],
+			[/^Warning: request through the proxy failed \(HTTP (.+)\), retrying directly\.\.\.$/,
+			                                            _('Warning: request through the proxy failed (HTTP %s), retrying directly...')],
 			[/^Error: download failed! \(curl exit: (.+)\)$/,
 			                                            _('Error: download failed! (curl exit: %s)')],
 			[/^Error: firmware size mismatch \(expected (.+) bytes, got (.+) bytes\)$/,
@@ -698,6 +700,33 @@ return view.extend({
 			}).join('\n');
 		}
 
+		// 前缀式下载代理：必须带协议与主机，可带路径；不接受查询串/片段/空白/引号，
+		// 因为脚本是直接做字符串前缀拼接的（PROXY + URL），不是 curl 的 -x 传输代理。
+		var PROXY_URL_RE = /^https?:\/\/[^\s/?#"'<>]+(?:\/[^\s?#"'<>]*)?$/;
+
+		// 读取复选框与输入框的当前状态：
+		//   未勾选           → 不使用代理（value 仅用于保存，便于下次勾选时恢复）
+		//   勾选但为空/非法  → error 非空，保存时中止
+		//   勾选且合法       → 补结尾斜杠后返回（脚本按前缀拼接，缺斜杠会拼出脏 URL）
+		function proxyConfig() {
+			var cb = document.getElementById('cfg-proxy-enabled');
+			var enabled = !!(cb && cb.checked);
+			var el = document.getElementById('cfg-proxy');
+			var raw = el ? String(el.value || '').trim() : '';
+			if (!enabled) return {enabled: false, value: raw, error: ''};
+			if (!raw) return {enabled: true, value: raw, error: _('Please enter the download proxy URL')};
+			if (!PROXY_URL_RE.test(raw)) return {enabled: true, value: raw, error: _('Invalid proxy URL')};
+			return {enabled: true, value: /\/$/.test(raw) ? raw : raw + '/', error: ''};
+		}
+
+		// 复选框联动：勾选才显示代理链接输入框。取消勾选时保留已填内容，方便再次启用。
+		function syncProxyUI() {
+			var cb = document.getElementById('cfg-proxy-enabled');
+			var el = document.getElementById('cfg-proxy');
+			if (!el) return;
+			el.style.display = cb && cb.checked ? '' : 'none';
+		}
+
 		function parseUrl() {
 			var url = document.getElementById('cfg-url').value.trim();
 			var m = url.match(/github\.com\/([^\/]+\/[^\/]+)\/releases\/tag\/([^\/\s?#]+)/);
@@ -713,8 +742,20 @@ return view.extend({
 		}
 
 		function saveCfg() {
+			var pc = proxyConfig();
+			if (pc.error) {
+				ui.addNotification(null, E('p', pc.error), 'error');
+				var proxyEl = document.getElementById('cfg-proxy');
+				if (proxyEl) proxyEl.focus();
+				return;
+			}
+			// 合法且启用时把补好斜杠的值写回输入框，让用户看到实际生效的地址
+			if (pc.enabled) {
+				var el = document.getElementById('cfg-proxy');
+				if (el) el.value = pc.value;
+			}
 			var g = function(id) { return (document.getElementById(id) || {}).value || ''; };
-			var cmd = "uci set online-upgrade.settings.repo='" + g('cfg-repo').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.tag='" + g('cfg-tag').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.direct_url='" + g('cfg-direct-url').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.proxy='" + g('cfg-proxy').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.reconnect_hosts='" + g('cfg-reconnect-hosts').replace(/'/g,"'\\''") + "' && uci commit online-upgrade";
+			var cmd = "uci set online-upgrade.settings.repo='" + g('cfg-repo').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.tag='" + g('cfg-tag').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.direct_url='" + g('cfg-direct-url').replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.proxy='" + pc.value.replace(/'/g,"'\\''") + "' && uci set online-upgrade.settings.proxy_enabled='" + (pc.enabled ? '1' : '0') + "' && uci set online-upgrade.settings.reconnect_hosts='" + g('cfg-reconnect-hosts').replace(/'/g,"'\\''") + "' && uci commit online-upgrade";
 			fs.exec('/bin/sh', ['-c', cmd]).then(function() {
 				// 保存成功后刷新快照：用户随后清空输入框，探测仍应使用刚保存的地址。
 				reconnectHosts = reconnectHostsNow();
@@ -757,6 +798,7 @@ return view.extend({
 				'echo "tag=$(uci -q get online-upgrade.settings.tag)"\n' +
 				'echo "direct_url=$(uci -q get online-upgrade.settings.direct_url)"\n' +
 				'echo "proxy=$(uci -q get online-upgrade.settings.proxy)"\n' +
+				'echo "proxy_enabled=$(uci -q get online-upgrade.settings.proxy_enabled)"\n' +
 				'echo "hosts=$(uci -q get online-upgrade.settings.reconnect_hosts)"'
 			]).then(function(r) {
 				var cfg = {};
@@ -772,6 +814,13 @@ return view.extend({
 				fill('cfg-tag', cfg.tag);
 				fill('cfg-direct-url', cfg.direct_url);
 				fill('cfg-proxy', cfg.proxy);
+				// 旧版配置没有 proxy_enabled：代理非空即视为启用（与脚本侧的兼容判断一致）
+				var proxyCb = document.getElementById('cfg-proxy-enabled');
+				if (proxyCb) {
+					proxyCb.checked = cfg.proxy_enabled === '1' ||
+						(cfg.proxy_enabled !== '0' && (cfg.proxy || '').trim() !== '');
+					syncProxyUI();
+				}
 				fill('cfg-reconnect-hosts', cfg.hosts);
 				reconnectHosts = (cfg.hosts || '').trim() || DEFAULT_RECONNECT_HOSTS;
 			});
@@ -857,7 +906,11 @@ return view.extend({
 
 					E('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;'}, [
 						E('label', {style: 'min-width:160px;font-size:13px;color:#555;font-weight:500;'}, _('Download proxy (optional)')),
-						E('input', {id: 'cfg-proxy', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);', placeholder: 'https://ghfast.top/'})
+						E('label', {style: 'display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;'}, [
+							E('input', {id: 'cfg-proxy-enabled', type: 'checkbox', style: 'margin:0;cursor:pointer;', change: syncProxyUI}),
+							_('Enable proxy')
+						]),
+						E('input', {id: 'cfg-proxy', type: 'text', style: 'flex:1;min-width:200px;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:var(--input-bg,transparent);display:none;', placeholder: 'https://ghfast.top/'})
 					]),
 					E('div', {style: 'display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;'}, [
 						E('label', {style: 'min-width:160px;font-size:13px;color:#555;font-weight:500;padding-top:8px;'}, _('Reconnect addresses')),

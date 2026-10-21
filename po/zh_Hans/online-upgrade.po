@@ -116,6 +116,9 @@ msgstr "GitHub Release Tag 地址"
 msgid "Download proxy (optional)"
 msgstr "下载代理(可选)"
 
+msgid "Enable proxy"
+msgstr "启用代理"
+
 msgid "Reconnect addresses"
 msgstr "重连地址"
 
@@ -444,6 +447,12 @@ msgstr "已解析: 仓库=%s, 标签=%s"
 msgid "Invalid URL format"
 msgstr "URL 格式不正确"
 
+msgid "Please enter the download proxy URL"
+msgstr "请输入下载代理链接"
+
+msgid "Invalid proxy URL"
+msgstr "代理链接格式不正确"
+
 msgid "Configuration saved"
 msgstr "配置已保存"
 
@@ -485,8 +494,8 @@ msgstr "[1/2] 固件镜像下载地址模式，跳过 Release 获取"
 msgid "[1/2] Fetching release information..."
 msgstr "[1/2] 正在获取 Release 信息..."
 
-msgid "Warning: direct GitHub API access failed, retrying through the proxy..."
-msgstr "警告：直连 GitHub API 失败，尝试通过代理..."
+msgid "Warning: request through the proxy failed (HTTP %s), retrying directly..."
+msgstr "警告：通过代理请求失败（HTTP %s），正在尝试直连..."
 
 msgid "Warning: GitHub API rate limited, waiting before retry..."
 msgstr "警告：GitHub API 限速，等待后重试..."
