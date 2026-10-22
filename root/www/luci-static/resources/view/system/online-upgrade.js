@@ -140,7 +140,8 @@ return view.extend({
 		// 升级失败：状态文件里的 failed:<code>:<args> 同样是稳定码，由 shell 写入
 		var FAIL_TEMPLATES = {
 			download: _('Download failed (curl exit: %s)'),
-			size:     _('Firmware size mismatch (expected %s bytes, got %s bytes)')
+			size:     _('Firmware size mismatch (expected %s bytes, got %s bytes)'),
+			corrupt:  _('Firmware archive is corrupted (truncated download)')
 		};
 
 		function trFail(status) {
@@ -398,6 +399,39 @@ return view.extend({
 			if (text && t) text.textContent = t;
 		}
 
+		// 四个升级入口必须同时隐藏：只藏 keep 模式的两个按钮时，
+		// 「Upgrade Now (clean)」仍可点击，会并发启动第二个升级进程。
+		function hideUpgradeButtons() {
+			['btn-upgrade', 'btn-force', 'btn-upgrade-clean', 'btn-force-clean'].forEach(function(id) {
+				var el = document.getElementById(id);
+				if (el) el.style.display = 'none';
+			});
+		}
+
+		// 页面加载时探测进行中的升级：刷新页面不能重新放出升级入口。
+		// 同时禁用「检查更新」—— check 与 upgrade 共用 /tmp/release.json。
+		function detectRunningUpgrade() {
+			// 进行中的状态：这些状态下 /tmp/firmware.* 或 /tmp/release.json 正被占用，
+			// 再启动一次会由第二个 curl -o 截断第一个进程即将刷写的镜像。
+			var RUNNING_STATES = /^(starting|backing_up|downloading|downloaded|saving_ts|sysupgrade)\b/;
+			// 状态文件可能停在 starting/downloading（进程被 kill -9 后没人改写它），
+			// 单看状态会永久禁用入口。只有锁持有者仍存活时才认定「升级进行中」
+			// （kill 是 ash 内建命令，不需要额外的可执行文件）。
+			fs.exec('/bin/sh', ['-c',
+				'st="$(cat /tmp/online-upgrade-status 2>/dev/null)"; ' +
+				'pid="$(cat /tmp/online-upgrade.lock/pid 2>/dev/null)"; ' +
+				'[ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && echo "$st"'
+			]).then(function(r) {
+				var st = (r.stdout || '').trim();
+				if (!st || !RUNNING_STATES.test(st)) return;
+				hideUpgradeButtons();
+				var btnCheck = document.getElementById('btn-check');
+				if (btnCheck) btnCheck.disabled = true;
+				var resultEl = document.getElementById('check-result');
+				if (resultEl) resultEl.textContent = _('An upgrade is already in progress. Do not start another one.');
+			}).catch(function() {});
+		}
+
 		function startUpgrade(isForce, keepConfig) {
 			if (isForce) {
 				var repo = (document.getElementById('cfg-repo')||{}).value.trim();
@@ -428,10 +462,7 @@ return view.extend({
 			var progArea = document.getElementById('progress-area');
 			if (progArea) progArea.style.display = 'block';
 
-			var upgBtn = document.getElementById('btn-upgrade');
-			if (upgBtn) upgBtn.style.display = 'none';
-			var forceBtn = document.getElementById('btn-force');
-			if (forceBtn) forceBtn.style.display = 'none';
+			hideUpgradeButtons();
 
 			// 假进度条只覆盖备份阶段（5%→25%）；下载起由真实进度/状态驱动
 			var steps = [
@@ -448,7 +479,17 @@ return view.extend({
 			}, 2000);
 
 			var keepArg = keepConfig ? 'keep' : 'clean';
-			fs.exec('/usr/bin/online-upgrade.sh', ['background', keepArg]);
+			fs.exec('/usr/bin/online-upgrade.sh', ['background', keepArg]).then(function(r) {
+				// 脚本互斥锁拒绝：已有升级在运行。绝不能再轮询——那是别人那次升级的状态。
+				if (r && r.code !== 0) {
+					clearInterval(interval);
+					if (pollTimer) clearInterval(pollTimer);
+					pollTimer = null;
+					hideUpgradeButtons();
+					if (progArea) progArea.style.display = 'none';
+					updateOutput('\n' + _('An upgrade is already in progress. Do not start another one.') + '\n');
+				}
+			});
 
 			// 升级流程是否已进入刷写阶段
 			var reachedSysupgrade = false;
@@ -904,6 +945,7 @@ return view.extend({
 				reconnectHosts = (cfg.hosts || '').trim() || DEFAULT_RECONNECT_HOSTS;
 			});
 			refreshBackupInfo();
+			detectRunningUpgrade();
 		}, 100);
 
 		// ======== 构建页面 ========

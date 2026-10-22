@@ -568,3 +568,15 @@ msgstr ""
 msgid "Rollback complete; the previous configuration has been restored."
 msgstr ""
 
+msgid "Firmware archive is corrupted (truncated download)"
+msgstr ""
+
+msgid "An upgrade is already in progress. Do not start another one."
+msgstr ""
+
+msgid "Error: another upgrade is already running; refusing to start a second one."
+msgstr ""
+
+msgid "Error: firmware archive failed the gzip integrity test (truncated or corrupted download)"
+msgstr ""
+

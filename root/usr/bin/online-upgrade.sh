@@ -114,6 +114,46 @@ KEEP_MODE="${2:-keep}"
 #   RESULT=error        其它错误
 emit_result() { echo "RESULT=$1"; }
 
+# ===== 升级互斥锁 =====
+# 同一时刻只允许一个 upgrade 进程操作 /tmp/firmware.*：后启动进程的 curl -o 会以
+# O_TRUNC 截断前一个进程即将交给 sysupgrade 的镜像（校验通过 → 刷写之间的 TOCTOU）。
+# 用 mkdir 做原子锁（不依赖 busybox 是否编入了 flock）；pid 用于识别 kill -9 /
+# 断电留下的残留锁 —— pid 不再存活时清掉重试，避免把升级永久锁死。
+LOCK_DIR="/tmp/online-upgrade.lock"
+
+release_lock() {
+    rm -rf "$LOCK_DIR"
+}
+
+# 抢锁成功返回 0；已有存活进程持锁返回 1。持锁进程退出时由 trap 释放。
+acquire_lock() {
+    local pid
+    # background 父进程已经抢到锁，通过环境变量把所有权交给子进程
+    if [ "${ONLINE_UPGRADE_LOCK_HELD:-0}" = "1" ] && [ -d "$LOCK_DIR" ]; then
+        echo $$ > "${LOCK_DIR}/pid"
+        trap release_lock EXIT
+        trap 'release_lock; exit 130' INT TERM
+        return 0
+    fi
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+        echo $$ > "${LOCK_DIR}/pid"
+        trap release_lock EXIT
+        trap 'release_lock; exit 130' INT TERM
+        return 0
+    fi
+    pid="$(cat "${LOCK_DIR}/pid" 2>/dev/null)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        return 1
+    fi
+    # 残留锁：持锁进程已不存在（kill -9 / 断电），清理后重试一次
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || return 1
+    echo $$ > "${LOCK_DIR}/pid"
+    trap release_lock EXIT
+    trap 'release_lock; exit 130' INT TERM
+    return 0
+}
+
 echo "========================================"
 echo "  Firmware Online Upgrade"
 if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ] || [ "$MODE" = "restore" ] || [ "$MODE" = "--restore" ]; then
@@ -192,10 +232,20 @@ arch_hint() {
 # ===== 后台升级模式 =====
 if [ "$MODE" = "background" ] || [ "$MODE" = "--background" ] || [ "$MODE" = "--bg" ]; then
     KEEP_PASS="${2:-keep}"
+    # 先抢锁再写 status：被拒绝的重复调用不能覆盖正在运行那次升级的状态。
+    if ! acquire_lock; then
+        echo "Error: another upgrade is already running; refusing to start a second one."
+        echo "Error: another upgrade is already running; refusing to start a second one." >>/tmp/online-upgrade.log
+        exit 1
+    fi
+    # 锁移交给子进程（环境变量标记）；父进程退出时不能触发 release_lock
+    trap - EXIT INT TERM
     # 先重置状态文件再 fork：GitHub 模式下子进程要先拉 Release API（可能几十秒），
     # 期间前端轮询会读到上一次升级留下的终态（sysupgrade / failed:...）。
     echo "starting" > /tmp/online-upgrade-status
-    setsid /bin/sh "$0" "upgrade" "$KEEP_PASS" </dev/null >/tmp/online-upgrade.log 2>&1 &
+    ONLINE_UPGRADE_LOCK_HELD=1 setsid /bin/sh "$0" "upgrade" "$KEEP_PASS" </dev/null >/tmp/online-upgrade.log 2>&1 &
+    # setsid 可能再 fork 一次，子进程启动后会自己改写 pid；这里先填 $! 缩小空窗
+    echo $! > "${LOCK_DIR}/pid"
     exit 0
 fi
 
@@ -276,6 +326,16 @@ if [ "$MODE" = "restore" ] || [ "$MODE" = "--restore" ]; then
 
     echo "Error: rollback failed; the previous configuration is saved at ${SNAPSHOT}"
     exit 2
+fi
+
+# ===== 直接执行 upgrade 时同样要抢锁 =====
+# background 模式已由父进程持锁并通过环境变量交接；这里是直接命令行调用的入口。
+if [ "$MODE" = "upgrade" ] || [ "$MODE" = "--upgrade" ]; then
+    if ! acquire_lock; then
+        echo ""
+        echo "Error: another upgrade is already running; refusing to start a second one."
+        exit 1
+    fi
 fi
 
 # ===== 校验仓库配置 =====
@@ -568,11 +628,14 @@ echo "backing_up" > /tmp/online-upgrade-status
 FULL_URL="$(full_url "$DOWNLOAD_URL")"
 echo ""
 echo "Step 1: Downloading firmware..."
+# 缓存键必须覆盖「哪个资产」：同一 Release 内所有资产的 updated_at 相同，
+# 只比时间戳会在切换 firmware_pattern / 资产后复用上一份镜像（刷错固件）。
+CACHE_KEY="${FILE_NAME}|${DOWNLOAD_URL}|${ASSET_SIZE}|${ASSET_UPDATED}"
 DOWNLOAD_SKIP=0
-# 仅当已知编译时间戳且缓存文件存在时才考虑跳过（避免 ASSET_UPDATED 为空时误跳过）
+# 仅当资产标识已知且缓存文件存在时才考虑跳过（避免 ASSET_UPDATED 为空时误跳过）
 if [ -n "$ASSET_UPDATED" ] && [ -f "$TMP_FIRMWARE" ] && [ -f "${TMP_FIRMWARE}.ts" ]; then
-    LOCAL_TS=$(cat "${TMP_FIRMWARE}.ts")
-    if [ "$LOCAL_TS" = "$ASSET_UPDATED" ]; then
+    LOCAL_KEY="$(cat "${TMP_FIRMWARE}.ts")"
+    if [ "$LOCAL_KEY" = "$CACHE_KEY" ]; then
         echo "  Firmware already downloaded, skipping (${ASSET_UPDATED_LOCAL})"
         DOWNLOAD_SKIP=1
     fi
@@ -591,31 +654,52 @@ if [ "$DOWNLOAD_SKIP" = "0" ]; then
     fi
     [ -n "$DL_TOTAL" ] && echo "downloading:$DL_TOTAL" > /tmp/online-upgrade-status
     echo "  URL: $(echo "$FULL_URL" | head -c 80)..."
-    curl -sL -o "$TMP_FIRMWARE" "$FULL_URL" 2>&1
+    # -f/--fail：404/403 等 HTTP 错误直接失败，不把错误页写成固件
+    curl -fsSL -o "$TMP_FIRMWARE" "$FULL_URL" 2>&1
     CURL_EXIT=$?
     if [ "$CURL_EXIT" -ne 0 ] || [ ! -s "$TMP_FIRMWARE" ]; then
         # 协议：failed:<code>:<args>；展示文案由前端按 code 渲染
         echo "failed:download:$CURL_EXIT" > /tmp/online-upgrade-status
         echo "Error: download failed! (curl exit: $CURL_EXIT)"
-        rm -f "$TMP_FIRMWARE"
+        rm -f "$TMP_FIRMWARE" "${TMP_FIRMWARE}.ts"
         exit 1
     fi
-    # 校验文件大小与预期一致，防止下载到错误页/被截断的假固件
-    # 仅在大小为已知数字时校验（直链模式 ASSET_SIZE 为空，跳过）
+    # 预期大小：GitHub 模式用资产 size；直链模式 ASSET_SIZE 为空，退回 HEAD 的
+    # Content-Length（DL_TOTAL，同时用于进度显示）。两者都未知时才跳过大小校验。
+    EXPECTED_SIZE=""
     case "$ASSET_SIZE" in
         ''|*[!0-9]*) ;;
-        *)
+        *) EXPECTED_SIZE="$ASSET_SIZE" ;;
+    esac
+    if [ -z "$EXPECTED_SIZE" ]; then
+        case "$DL_TOTAL" in
+            ''|*[!0-9]*) ;;
+            *) EXPECTED_SIZE="$DL_TOTAL" ;;
+        esac
+    fi
+    if [ -n "$EXPECTED_SIZE" ]; then
         ACTUAL_SIZE=$(wc -c < "$TMP_FIRMWARE" 2>/dev/null | tr -d ' ')
-        if [ "$ACTUAL_SIZE" != "$ASSET_SIZE" ]; then
-            echo "failed:size:${ASSET_SIZE}:${ACTUAL_SIZE}" > /tmp/online-upgrade-status
-            echo "Error: firmware size mismatch (expected ${ASSET_SIZE} bytes, got ${ACTUAL_SIZE} bytes)"
+        if [ "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]; then
+            echo "failed:size:${EXPECTED_SIZE}:${ACTUAL_SIZE}" > /tmp/online-upgrade-status
+            echo "Error: firmware size mismatch (expected ${EXPECTED_SIZE} bytes, got ${ACTUAL_SIZE} bytes)"
             echo "Hint: the download may have been intercepted by the proxy or returned an error page; check the PROXY setting"
-            rm -f "$TMP_FIRMWARE"
+            rm -f "$TMP_FIRMWARE" "${TMP_FIRMWARE}.ts"
             exit 1
         fi
-        ;;
+    fi
+    # .gz 压缩流再验一遍：大小为未知（服务器不给 Content-Length）时，截断的
+    # 压缩包只能靠它发现；已知大小时也能挡住「大小对但内容坏」的代理注入。
+    case "$TMP_FIRMWARE" in
+        *.gz)
+            if command -v gzip >/dev/null 2>&1 && ! gzip -t "$TMP_FIRMWARE" 2>/dev/null; then
+                echo "failed:corrupt" > /tmp/online-upgrade-status
+                echo "Error: firmware archive failed the gzip integrity test (truncated or corrupted download)"
+                rm -f "$TMP_FIRMWARE" "${TMP_FIRMWARE}.ts"
+                exit 1
+            fi
+            ;;
     esac
-    echo "$ASSET_UPDATED" > "${TMP_FIRMWARE}.ts"
+    printf '%s\n' "$CACHE_KEY" > "${TMP_FIRMWARE}.ts"
     echo "  Download complete ($(du -h "$TMP_FIRMWARE" | cut -f1))"
     echo "downloaded" > /tmp/online-upgrade-status
 fi

@@ -595,3 +595,15 @@ msgstr "错误：恢复失败，正在回滚..."
 
 msgid "Rollback complete; the previous configuration has been restored."
 msgstr "回滚完成，已恢复为之前的配置。"
+
+msgid "Firmware archive is corrupted (truncated download)"
+msgstr "固件压缩包已损坏（下载被截断）"
+
+msgid "An upgrade is already in progress. Do not start another one."
+msgstr "已有升级正在进行，请勿重复启动。"
+
+msgid "Error: another upgrade is already running; refusing to start a second one."
+msgstr "错误：已有升级正在进行，拒绝启动第二个升级进程。"
+
+msgid "Error: firmware archive failed the gzip integrity test (truncated or corrupted download)"
+msgstr "错误：固件压缩包未通过 gzip 完整性校验（下载被截断或已损坏）"
