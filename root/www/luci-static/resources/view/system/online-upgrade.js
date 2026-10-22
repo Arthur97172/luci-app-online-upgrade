@@ -45,6 +45,35 @@ function injectMapCSS() {
 	if (el.textContent !== MAP_CSS) el.textContent = MAP_CSS;
 }
 
+// ===== 提示框配色（明/暗主题）=====
+// 琥珀色提示框原来是内联配色。内联样式既压不过也响应不了主题的暗色开关，暗色主题下会
+// 留一块亮米黄色方框。这里把配色移到类名上，由注入的样式按主题切换，明色保持原配色：
+//   1. 系统偏好 prefers-color-scheme —— Argon 的自动模式走这条；显式选 light 时
+//      由 :not([data-argon-mode="light"]) / :not([data-darkmode="false"]) 让出；
+//   2. Argon 的 :root[data-argon-mode="dark"]；
+//   3. Bootstrap 的 :root[data-darkmode="true"]（24.10 起用该属性区分明暗）。
+// 暗色底用半透明琥珀而不是固定深色，铺在任意主题的深色面板上都不会撞色。
+var NOTE_CSS =
+	'.online-upgrade-note{--note-fg:#b45309;--note-bg:#fffbeb;--note-border:#fde68a;' +
+		'color:var(--note-fg);background:var(--note-bg);border:1px solid var(--note-border)}' +
+	'@media (prefers-color-scheme: dark){' +
+		':root:not([data-argon-mode="light"]):not([data-darkmode="false"]) .online-upgrade-note{' +
+			'--note-fg:#fcd34d;--note-bg:rgba(180,83,9,.18);--note-border:rgba(253,230,138,.35)}}' +
+	':root[data-argon-mode="dark"] .online-upgrade-note,' +
+	':root[data-darkmode="true"] .online-upgrade-note,' +
+	'html.dark .online-upgrade-note{' +
+		'--note-fg:#fcd34d;--note-bg:rgba(180,83,9,.18);--note-border:rgba(253,230,138,.35)}';
+
+function injectNoteCSS() {
+	var el = document.getElementById('online-upgrade-note-css');
+	if (!el) {
+		el = document.createElement('style');
+		el.id = 'online-upgrade-note-css';
+		document.head.appendChild(el);
+	}
+	if (el.textContent !== NOTE_CSS) el.textContent = NOTE_CSS;
+}
+
 return view.extend({
 	handleSave: null,
 	handleSaveApply: null,
@@ -848,6 +877,7 @@ return view.extend({
 
 		// ======== 构建页面 ========
 		injectMapCSS();
+		injectNoteCSS();
 		return E('div', {'class': 'cbi-map online-upgrade-map'}, [
 			E('h2', {'class': 'cbi-page-title'}, _('Firmware Online Upgrade')),
 
@@ -941,7 +971,7 @@ return view.extend({
 					E('input', {id: 'cfg-repo', type: 'hidden'}),
 					E('input', {id: 'cfg-tag', type: 'hidden'})
 				]),
-				E('div', {style: 'margin-top:8px;font-size:12px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;'}, _("Note: the firmware image URL takes priority over the GitHub Release Tag URL. In direct-URL mode the version is not checked - use \"Force Update\" to flash directly. A GitHub Release Tag URL must be parsed with \"Parse\", and both take effect only after \"Save Configuration\".")),
+				E('div', {'class': 'online-upgrade-note', style: 'margin-top:8px;font-size:12px;border-radius:4px;padding:8px 10px;'}, _("Note: the firmware image URL takes priority over the GitHub Release Tag URL. In direct-URL mode the version is not checked - use \"Force Update\" to flash directly. A GitHub Release Tag URL must be parsed with \"Parse\", and both take effect only after \"Save Configuration\".")),
 				E('div', {style: 'margin-top:14px;text-align:right;'}, [
 					E('button', {class: 'btn cbi-button-save', style: 'padding:7px 20px;border-radius:4px;cursor:pointer;', click: saveCfg}, _('Save Configuration'))
 				])
