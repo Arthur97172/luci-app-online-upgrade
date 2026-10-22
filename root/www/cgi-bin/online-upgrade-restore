@@ -1,41 +1,87 @@
 #!/bin/sh
 # Online-upgrade manual restore CGI
-# Receives raw POST body (application/octet-stream), saves and extracts
+# Receives a raw POST body (application/octet-stream), validates it, then hands it to
+# online-upgrade.sh restore (snapshot + rollback).
+#
+# 鉴权：前端先用 fs.exec 以 root 身份把一次性令牌写入 /root/.online-upgrade-restore.token
+# （/root 为 0700，令牌文件 umask 077），随后在同一次手动恢复里通过
+# X-Online-Upgrade-Token 请求头带上。这里必须先校验令牌再读请求体 —— /cgi-bin 不经过
+# LuCI 会话鉴权，任何人都能 POST；令牌校验成功即删除，防止重放。
 
-TMPFILE="/tmp/manual-restore-backup.tar.gz"
+TOKEN_FILE="/root/.online-upgrade-restore.token"
+TMPFILE=""
+LIMIT=16777216   # 16 MiB
 
-# 直接读 stdin 的 POST body
-cat > "$TMPFILE" 2>/dev/null
-
-# 验证文件是否存在且非空
-if [ ! -s "$TMPFILE" ]; then
+reply() {
 	echo "Content-Type: text/plain; charset=utf-8"
 	echo ""
-	echo "ERROR:No file data received"
-	rm -f "$TMPFILE"
+	echo "$1"
+}
+
+cleanup() {
+	[ -n "$TMPFILE" ] && rm -f "$TMPFILE"
+	rm -f "$TOKEN_FILE"
+}
+
+# 只接受 POST
+if [ "$REQUEST_METHOD" != "POST" ]; then
+	reply "ERROR:Unauthorized"
 	exit 0
 fi
 
-# 验证 gzip 格式
+GOT_TOKEN="${HTTP_X_ONLINE_UPGRADE_TOKEN:-}"
+if [ -z "$GOT_TOKEN" ] || [ ! -f "$TOKEN_FILE" ] || [ "$GOT_TOKEN" != "$(cat "$TOKEN_FILE" 2>/dev/null)" ]; then
+	reply "ERROR:Unauthorized"
+	exit 0
+fi
+# 一次性：校验通过后立即失效，无论后续成功与否
+rm -f "$TOKEN_FILE"
+
+# 限流：先看 Content-Length，避免把超大请求体读进 tmpfs
+if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt "$LIMIT" ] 2>/dev/null; then
+	reply "ERROR:Uploaded file is too large (limit: 16 MB)"
+	exit 0
+fi
+
+umask 077
+TMPFILE=$(mktemp /tmp/manual-restore-backup.XXXXXX 2>/dev/null)
+if [ -z "$TMPFILE" ] || [ ! -f "$TMPFILE" ]; then
+	reply "ERROR:Unable to create a temporary file"
+	exit 0
+fi
+
+# 即使没有 Content-Length 也只读 LIMIT+1 字节，多出来的用于判定超限
+dd bs=4096 count=$((LIMIT / 4096 + 1)) > "$TMPFILE" 2>/dev/null
+SIZE=$(wc -c < "$TMPFILE" 2>/dev/null | tr -d ' ')
+if [ -z "$SIZE" ] || [ "$SIZE" -eq 0 ] 2>/dev/null; then
+	reply "ERROR:No file data received"
+	cleanup
+	exit 0
+fi
+if [ "$SIZE" -gt "$LIMIT" ] 2>/dev/null; then
+	reply "ERROR:Uploaded file is too large (limit: 16 MB)"
+	cleanup
+	exit 0
+fi
+
 if ! gzip -t "$TMPFILE" 2>/dev/null; then
-	echo "Content-Type: text/plain; charset=utf-8"
-	echo ""
-	echo "ERROR:Uploaded file is not a valid gzip archive"
-	rm -f "$TMPFILE"
+	reply "ERROR:Uploaded file is not a valid gzip archive"
+	cleanup
 	exit 0
 fi
 
-# 执行恢复（tar xzf 到根目录）
-cd / && tar xzf "$TMPFILE" 2>/dev/null
+# 统一入口：脚本内部会先 sysupgrade -b 快照，失败时回滚
+OUT=$(/usr/bin/online-upgrade.sh restore "$TMPFILE" 2>&1)
 RV=$?
+logger -t online-upgrade-restore "restore exit=$RV: $(echo "$OUT" | tail -n 3 | tr '\n' ' ')" 2>/dev/null || true
 rm -f "$TMPFILE"
+TMPFILE=""
 
-if [ $RV -eq 0 ]; then
-	echo "Content-Type: text/plain; charset=utf-8"
-	echo ""
-	echo "OK:Configuration restored from the uploaded backup. Reboot the router to apply it."
-else
-	echo "Content-Type: text/plain; charset=utf-8"
-	echo ""
-	echo "ERROR:Restore failed; the backup file may be corrupted"
-fi
+case $RV in
+	0) reply "OK:Configuration restored from the uploaded backup. Reboot the router to apply it." ;;
+	1) reply "ERROR:Restore failed; the previous configuration has been restored." ;;
+	2) reply "ERROR:Restore failed; the previous configuration is saved at /root/pre-restore-backup.tar.gz." ;;
+	3) reply "ERROR:Could not create a safety backup; the restore was aborted." ;;
+	*) reply "ERROR:Restore failed; the backup file may be corrupted" ;;
+esac
+exit 0

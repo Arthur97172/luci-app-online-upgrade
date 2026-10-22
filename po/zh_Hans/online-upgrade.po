@@ -383,14 +383,11 @@ msgstr "⚠️ 配置文件备份时间 %s（旧版备份）"
 msgid "⚠️ No backup file"
 msgstr "⚠️ 暂无备份文件"
 
-msgid "Restoring configuration (using sysupgrade -f)..."
-msgstr "正在恢复配置 (使用 sysupgrade -f)..."
+msgid "Restoring configuration (using sysupgrade -r)..."
+msgstr "正在恢复配置 (使用 sysupgrade -r)..."
 
 msgid "Warning:"
 msgstr "警告:"
-
-msgid "✅ Configuration restored. Reboot the router to apply it."
-msgstr "✅ 配置恢复成功！建议重启路由器使配置生效。"
 
 msgid "✅ Configuration restored from %s"
 msgstr "✅ 配置已从 %s 恢复"
@@ -398,20 +395,17 @@ msgstr "✅ 配置已从 %s 恢复"
 msgid "❌ Restore failed"
 msgstr "❌ 恢复失败"
 
-msgid "No backup found under /root/, trying /etc/config/sysupgrade.tgz..."
-msgstr "未找到 /root/ 下的备份，尝试从 /etc/config/sysupgrade.tgz 恢复..."
+msgid "Safety backup created: %s"
+msgstr "已创建安全备份: %s"
 
-msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz"
-msgstr "✅ 配置已从 /etc/config/sysupgrade.tgz 部分恢复"
+msgid "Previous configuration snapshot: %s"
+msgstr "恢复前配置快照: %s"
 
-msgid "Reboot or re-apply the configuration."
-msgstr "请重启或重新应用配置。"
+msgid "Error: rollback failed; the previous configuration is saved at %s"
+msgstr "错误：回滚失败，原配置已保存在 %s"
 
-msgid "❌ Restore failed, no backup file found"
-msgstr "❌ 恢复失败，未找到任何备份文件"
-
-msgid "Configuration partially restored from /etc/config/sysupgrade.tgz"
-msgstr "配置已从 /etc/config/sysupgrade.tgz 恢复（部分）"
+msgid "Unable to create a restore token"
+msgstr "无法创建恢复令牌"
 
 msgid "No backup files to delete"
 msgstr "没有可删除的备份文件"
@@ -468,6 +462,24 @@ msgstr "配置已从上传的备份文件恢复，建议重启路由器使配置
 
 msgid "Restore failed; the backup file may be corrupted"
 msgstr "配置恢复失败，备份文件可能已损坏"
+
+msgid "Unauthorized"
+msgstr "未授权"
+
+msgid "Uploaded file is too large (limit: 16 MB)"
+msgstr "上传文件过大（上限 16 MB）"
+
+msgid "Unable to create a temporary file"
+msgstr "无法创建临时文件"
+
+msgid "Restore failed; the previous configuration has been restored."
+msgstr "配置恢复失败，已回滚到恢复前的配置。"
+
+msgid "Restore failed; the previous configuration is saved at /root/pre-restore-backup.tar.gz."
+msgstr "配置恢复失败，原配置已保存在 /root/pre-restore-backup.tar.gz。"
+
+msgid "Could not create a safety backup; the restore was aborted."
+msgstr "无法创建安全备份，已中止恢复。"
 
 # online-upgrade.sh 输出的整行文案（i18n-scan.pl 不扫描 shell，此处手工维护）
 msgid "Update record has been reset."
@@ -556,3 +568,30 @@ msgstr "Step 4: 执行 sysupgrade（干净升级，仅保留本插件）..."
 
 msgid "Saving the installed package list..."
 msgstr "正在保存已安装包列表..."
+
+msgid "Error: backup file not found."
+msgstr "错误：未找到备份文件。"
+
+msgid "Error: backup file is not a valid gzip archive."
+msgstr "错误：备份文件不是有效的 gzip 格式。"
+
+msgid "Error: backup archive contains unsafe paths."
+msgstr "错误：备份归档包含不安全的路径。"
+
+msgid "Creating a safety backup of the current configuration..."
+msgstr "正在创建当前配置的安全备份..."
+
+msgid "Error: could not create a safety backup; restore aborted."
+msgstr "错误：无法创建安全备份，已中止恢复。"
+
+msgid "Restoring configuration..."
+msgstr "正在恢复配置..."
+
+msgid "Configuration restored successfully. Reboot the router to apply it."
+msgstr "配置恢复成功，请重启路由器使配置生效。"
+
+msgid "Error: restore failed, rolling back..."
+msgstr "错误：恢复失败，正在回滚..."
+
+msgid "Rollback complete; the previous configuration has been restored."
+msgstr "回滚完成，已恢复为之前的配置。"

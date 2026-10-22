@@ -9,6 +9,7 @@
 #   online-upgrade.sh upgrade            Backup + download + sysupgrade
 #   online-upgrade.sh background         Run upgrade in background (for LuCI)
 #   online-upgrade.sh backup             Only backup
+#   online-upgrade.sh restore <file>     Restore a backup (snapshot + rollback)
 #   online-upgrade.sh reset              Reset update check record
 
 CONFIG_FILE="/etc/config/online-upgrade"
@@ -115,7 +116,7 @@ emit_result() { echo "RESULT=$1"; }
 
 echo "========================================"
 echo "  Firmware Online Upgrade"
-if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
+if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ] || [ "$MODE" = "restore" ] || [ "$MODE" = "--restore" ]; then
     echo "  System: ${DISTRO}"
     echo "  Architecture: ${ARCH}"
 elif [ "$SKIP_GITHUB" = "1" ]; then
@@ -223,6 +224,58 @@ if [ "$MODE" = "backup" ] || [ "$MODE" = "--backup" ]; then
         exit 1
     fi
     exit 0
+fi
+
+# ===== 独立恢复（自动恢复 / 手动恢复共用） =====
+# sysupgrade -f 只用于「随镜像升级时恢复配置」，单独执行只会打印 usage 并 exit 1；
+# 立即恢复必须用 -r。恢复前先用 sysupgrade -b 给当前配置拍快照，目标归档有问题时
+# 立即用快照回滚，避免把路由器留在半套配置上。
+# 退出码：0 成功；1 恢复失败但已回滚；2 恢复失败且回滚也失败；3 无法创建快照；4 归档无效
+if [ "$MODE" = "restore" ] || [ "$MODE" = "--restore" ]; then
+    RESTORE_FILE="$2"
+    SNAPSHOT="/root/pre-restore-backup.tar.gz"
+
+    if [ -z "$RESTORE_FILE" ] || [ ! -f "$RESTORE_FILE" ]; then
+        echo "Error: backup file not found."
+        exit 4
+    fi
+
+    if ! gzip -t "$RESTORE_FILE" 2>/dev/null; then
+        echo "Error: backup file is not a valid gzip archive."
+        exit 4
+    fi
+
+    # sysupgrade -r 最终是 tar -C / 解包，归档里的绝对路径与 .. 会落到预期之外；
+    # 备份由 sysupgrade -b 生成，正常情况下不会出现，拒绝即可。
+    if tar tzf "$RESTORE_FILE" 2>/dev/null | grep -qE '(^|/)\.\.(/|$)|^/'; then
+        echo "Error: backup archive contains unsafe paths."
+        exit 4
+    fi
+
+    echo "Creating a safety backup of the current configuration..."
+    # 先删旧快照：否则本次 sysupgrade -b 失败时，-s 会误判上一次的快照为成功
+    rm -f "$SNAPSHOT"
+    if ! sysupgrade -b "$SNAPSHOT" 2>/dev/null || [ ! -s "$SNAPSHOT" ]; then
+        echo "Error: could not create a safety backup; restore aborted."
+        exit 3
+    fi
+    echo "Safety backup created: ${SNAPSHOT}"
+
+    echo "Restoring configuration..."
+    if sysupgrade -r "$RESTORE_FILE"; then
+        echo "Configuration restored successfully. Reboot the router to apply it."
+        echo "Previous configuration snapshot: ${SNAPSHOT}"
+        exit 0
+    fi
+
+    echo "Error: restore failed, rolling back..."
+    if sysupgrade -r "$SNAPSHOT"; then
+        echo "Rollback complete; the previous configuration has been restored."
+        exit 1
+    fi
+
+    echo "Error: rollback failed; the previous configuration is saved at ${SNAPSHOT}"
+    exit 2
 fi
 
 # ===== 校验仓库配置 =====

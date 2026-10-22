@@ -358,13 +358,10 @@ msgstr ""
 msgid "⚠️ No backup file"
 msgstr ""
 
-msgid "Restoring configuration (using sysupgrade -f)..."
+msgid "Restoring configuration (using sysupgrade -r)..."
 msgstr ""
 
 msgid "Warning:"
-msgstr ""
-
-msgid "✅ Configuration restored. Reboot the router to apply it."
 msgstr ""
 
 msgid "✅ Configuration restored from %s"
@@ -373,19 +370,16 @@ msgstr ""
 msgid "❌ Restore failed"
 msgstr ""
 
-msgid "No backup found under /root/, trying /etc/config/sysupgrade.tgz..."
+msgid "Safety backup created: %s"
 msgstr ""
 
-msgid "✅ Configuration partially restored from /etc/config/sysupgrade.tgz"
+msgid "Previous configuration snapshot: %s"
 msgstr ""
 
-msgid "Reboot or re-apply the configuration."
+msgid "Error: rollback failed; the previous configuration is saved at %s"
 msgstr ""
 
-msgid "❌ Restore failed, no backup file found"
-msgstr ""
-
-msgid "Configuration partially restored from /etc/config/sysupgrade.tgz"
+msgid "Unable to create a restore token"
 msgstr ""
 
 msgid "No backup files to delete"
@@ -440,6 +434,24 @@ msgid "Configuration restored from the uploaded backup. Reboot the router to app
 msgstr ""
 
 msgid "Restore failed; the backup file may be corrupted"
+msgstr ""
+
+msgid "Unauthorized"
+msgstr ""
+
+msgid "Uploaded file is too large (limit: 16 MB)"
+msgstr ""
+
+msgid "Unable to create a temporary file"
+msgstr ""
+
+msgid "Restore failed; the previous configuration has been restored."
+msgstr ""
+
+msgid "Restore failed; the previous configuration is saved at /root/pre-restore-backup.tar.gz."
+msgstr ""
+
+msgid "Could not create a safety backup; the restore was aborted."
 msgstr ""
 
 msgid "Update record has been reset."
@@ -527,5 +539,32 @@ msgid "Step 4: Running sysupgrade (clean upgrade, plugin only)..."
 msgstr ""
 
 msgid "Saving the installed package list..."
+msgstr ""
+
+msgid "Error: backup file not found."
+msgstr ""
+
+msgid "Error: backup file is not a valid gzip archive."
+msgstr ""
+
+msgid "Error: backup archive contains unsafe paths."
+msgstr ""
+
+msgid "Creating a safety backup of the current configuration..."
+msgstr ""
+
+msgid "Error: could not create a safety backup; restore aborted."
+msgstr ""
+
+msgid "Restoring configuration..."
+msgstr ""
+
+msgid "Configuration restored successfully. Reboot the router to apply it."
+msgstr ""
+
+msgid "Error: restore failed, rolling back..."
+msgstr ""
+
+msgid "Rollback complete; the previous configuration has been restored."
 msgstr ""
 

@@ -190,7 +190,11 @@ return view.extend({
 			[/^Error: firmware size mismatch \(expected (.+) bytes, got (.+) bytes\)$/,
 			                                            _('Error: firmware size mismatch (expected %s bytes, got %s bytes)')],
 			[/^Hint: firmware file name is "(.+)"; make sure the release really contains it$/,
-			                                            _('Hint: firmware file name is "%s"; make sure the release really contains it')]
+			                                            _('Hint: firmware file name is "%s"; make sure the release really contains it')],
+			[/^Safety backup created: (.+)$/,            _('Safety backup created: %s')],
+			[/^Previous configuration snapshot: (.+)$/,  _('Previous configuration snapshot: %s')],
+			[/^Error: rollback failed; the previous configuration is saved at (.+)$/,
+			                                            _('Error: rollback failed; the previous configuration is saved at %s')]
 		];
 
 		// 输出框逐行翻译：整行精确命中优先；否则翻译行内已知键，键后的动态值原样保留。
@@ -626,31 +630,41 @@ return view.extend({
 			});
 		}
 
+		function confirmRestore(file) {
+			return confirm(_('Restore the configuration from a backup?') + '\n\n' +
+				fmt(_('Backup file: %s'), [file]) + '\n\n' +
+				_('sysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.).'));
+		}
+
+		// 恢复统一交给 online-upgrade.sh restore：脚本先给当前配置拍快照，
+		// 目标归档失败时自动回滚；返回码 0 才是成功（不再从 stdout 里找 OK）。
+		function runRestore(file, label) {
+			updateOutput(_('Restoring configuration (using sysupgrade -r)...') + '\n');
+			fs.exec('/usr/bin/online-upgrade.sh', ['restore', file]).then(function(r) {
+				if (r.stdout) updateOutput(r.stdout);
+				if (r.stderr) updateOutput(_('Warning:') + ' ' + r.stderr + '\n');
+				if (r.code === 0) {
+					ui.addNotification(null, E('p', fmt(_('✅ Configuration restored from %s'), [label])), 'info');
+				} else {
+					updateOutput(_('❌ Restore failed') + '\n');
+				}
+			}).catch(function(e) {
+				updateOutput(_('❌ Restore failed') + ': ' + e.message + '\n');
+			});
+		}
+
 		function autoRestore() {
 			fs.exec('/bin/sh', ['-c', 'ls -t /root/pre-upgrade-backup-*.tar.gz 2>/dev/null | head -1']).then(function(r) {
 				var latestBackup = (r.stdout || '').trim();
 				if (latestBackup) {
-					if (!confirm(_('Restore the configuration from a backup?') + '\n\n' +
-						fmt(_('Backup file: %s'), [latestBackup]) + '\n\n' +
-						_('sysupgrade will use this backup to restore all configuration (network, WiFi, firewall, etc.).'))) return;
-					updateOutput(_('Restoring configuration (using sysupgrade -f)...') + '\n');
-					fs.exec('/bin/sh', ['-c', 'sysupgrade -f "' + latestBackup + '" && echo OK || echo FAIL']).then(function(r2) {
-						if (r2.stderr) updateOutput(_('Warning:') + ' ' + r2.stderr + '\n');
-						var ok = (r2.stdout || '').indexOf('OK') >= 0;
-						if (ok) {
-							updateOutput(_('✅ Configuration restored. Reboot the router to apply it.') + '\n');
-							ui.addNotification(null, E('p', fmt(_('✅ Configuration restored from %s'), [latestBackup])), 'info');
-						} else {
-							updateOutput(_('❌ Restore failed') + '\n');
-						}
-					});
+					if (!confirmRestore(latestBackup)) return;
+					runRestore(latestBackup, latestBackup);
 				} else {
-					updateOutput(_('No backup found under /root/, trying /etc/config/sysupgrade.tgz...') + '\n');
-					fs.exec('/bin/sh', ['-c', 'cd / && tar xzf /etc/config/sysupgrade.tgz etc/config/ 2>/dev/null && echo OK || echo FAIL']).then(function(r3) {
-						var ok = (r3.stdout || '').indexOf('OK') >= 0;
-						updateOutput(ok ? _('✅ Configuration partially restored from /etc/config/sysupgrade.tgz') + '\n' + _('Reboot or re-apply the configuration.') + '\n' : _('❌ Restore failed, no backup file found') + '\n');
-						if (ok) ui.addNotification(null, E('p', _('Configuration partially restored from /etc/config/sysupgrade.tgz')), 'info');
-					});
+					// legacy 备份同样走完整恢复：过去只解压 etc/config/ 且没有确认框，
+					// 恢复范围与主路径不一致，点一下就会直接覆盖配置。
+					var legacy = '/etc/config/sysupgrade.tgz';
+					if (!confirmRestore(legacy)) return;
+					runRestore(legacy, legacy);
 				}
 			});
 		}
@@ -667,9 +681,9 @@ return view.extend({
 		// 用的都是 /tmp 这份），此刻删掉会把正在进行的刷写直接打断。
 		// 所以 /tmp 的清理要跳过 saving_ts / sysupgrade 两个状态；列表与删除共用同一
 		// 判据，保证确认框里列出的就是要删的。
-		var BACKUP_LIST_CMD = 'ls /root/pre-upgrade-backup-*.tar.gz 2>/dev/null; ' +
+		var BACKUP_LIST_CMD = 'ls /root/pre-upgrade-backup-*.tar.gz /root/pre-restore-backup.tar.gz 2>/dev/null; ' +
 			'case "$(cat /tmp/online-upgrade-status 2>/dev/null)" in saving_ts|sysupgrade) ;; *) ls /tmp/pre-upgrade-backup-*.tar.gz 2>/dev/null ;; esac';
-		var BACKUP_RM_CMD = 'rm -f /root/pre-upgrade-backup-*.tar.gz; ' +
+		var BACKUP_RM_CMD = 'rm -f /root/pre-upgrade-backup-*.tar.gz /root/pre-restore-backup.tar.gz; ' +
 			'case "$(cat /tmp/online-upgrade-status 2>/dev/null)" in saving_ts|sysupgrade) ;; *) rm -f /tmp/pre-upgrade-backup-*.tar.gz ;; esac; echo OK';
 
 		function deleteBackups() {
@@ -712,30 +726,47 @@ return view.extend({
 
 			updateOutput(fmt(_('Uploading backup file (%s)...'), [file.name]) + '\n');
 
-			var reader = new FileReader();
-			reader.onload = function(e) {
-				var arrayBuffer = e.target.result;
+			// CGI 只接受带一次性令牌的 POST：令牌由 root 写入 /root（0700），用完即删，
+			// 未认证请求无法触发恢复。令牌走请求头，不落 URL / 访问日志。
+			fs.exec('/bin/sh', ['-c',
+				'umask 077; T=$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | md5sum | cut -d" " -f1); ' +
+				'[ -n "$T" ] && echo "$T" > /root/.online-upgrade-restore.token && echo "$T"']).then(function(tr) {
+				var token = (tr.stdout || '').trim();
+				if (!/^[0-9a-f]{32}$/.test(token)) {
+					updateOutput(_('❌ Upload failed:') + ' ' + _('Unable to create a restore token') + '\n');
+					return;
+				}
 
-				updateOutput(_('Restoring...') + '\n');
-				fetch('/cgi-bin/online-upgrade-restore', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/octet-stream' },
-					body: arrayBuffer
-				}).then(function(resp) {
-					return resp.text();
-				}).then(function(text) {
-					var isOk = text.indexOf('OK:') === 0;
-					// CGI 返回英文协议串（OK:/ERROR: + 英文说明），此处按当前语言渲染
-					var msg = _(text.replace(/^(OK|ERROR):/, '').trim());
-					updateOutput((isOk ? '✅ ' : '❌ ') + msg + '\n');
-					if (isOk) {
-						ui.addNotification(null, E('p', _('✅ Configuration restored from the uploaded backup file')), 'info');
-					}
-				}).catch(function(err) {
-					updateOutput(_('❌ Upload failed:') + ' ' + err.message + '\n');
-				});
-			};
-			reader.readAsArrayBuffer(file);
+				var reader = new FileReader();
+				reader.onload = function(e) {
+					var arrayBuffer = e.target.result;
+
+					updateOutput(_('Restoring...') + '\n');
+					fetch('/cgi-bin/online-upgrade-restore', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/octet-stream',
+							'X-Online-Upgrade-Token': token
+						},
+						body: arrayBuffer
+					}).then(function(resp) {
+						return resp.text();
+					}).then(function(text) {
+						var isOk = text.indexOf('OK:') === 0;
+						// CGI 返回英文协议串（OK:/ERROR: + 英文说明），此处按当前语言渲染
+						var msg = _(text.replace(/^(OK|ERROR):/, '').trim());
+						updateOutput((isOk ? '✅ ' : '❌ ') + msg + '\n');
+						if (isOk) {
+							ui.addNotification(null, E('p', _('✅ Configuration restored from the uploaded backup file')), 'info');
+						}
+					}).catch(function(err) {
+						updateOutput(_('❌ Upload failed:') + ' ' + err.message + '\n');
+					});
+				};
+				reader.readAsArrayBuffer(file);
+			}).catch(function(err) {
+				updateOutput(_('❌ Upload failed:') + ' ' + err.message + '\n');
+			});
 		}
 
 		// 输出框：过滤协议行（RESULT=...），其余逐行翻译（整行命中优先，其次翻译行内已知键）。
