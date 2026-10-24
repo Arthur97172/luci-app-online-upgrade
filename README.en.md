@@ -31,24 +31,6 @@ ImmortalWrt / OpenWrt LuCI plugin - Online firmware upgrade from GitHub Releases
 5. Click **Upgrade Now** or **Force Update** to start, supports keep/clean modes
 6. Router will automatically backup config → download firmware → flash → reboot
 
-## Build
-
-```bash
-# Put this plugin into openwrt/package/luci-app-online-upgrade/
-cd openwrt
-make package/luci-app-online-upgrade/compile V=s
-
-# The Chinese translation is a separate subpackage: select the language first.
-# (luci.mk's DEFAULT is LUCI_LANG_zh_Hans||(ALL&&m); the SDK ships CONFIG_ALL=y so it
-#  already falls back to m — set it explicitly so we don't depend on that default.)
-echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
-make defconfig
-# Only the directory-level target is needed: LuciTranslation is evaluated inside the same
-# Makefile, so the i18n subpackage shares this builddir and is built along with it.
-# Note: there is no package/luci-i18n-online-upgrade-zh-cn/compile target.
-make package/luci-app-online-upgrade/compile V=s
-```
-
 ## Manual Install
 
 **opkg (OpenWrt/ImmortalWrt 23.05 and earlier):**
@@ -66,6 +48,27 @@ apk add --allow-untrusted luci-i18n-online-upgrade-zh-cn-*.apk
 ```
 
 > The translation package only supplies Chinese strings. The plugin works fine without it — the UI just stays in English.
+
+### Build from source
+
+```sh
+cd openwrt
+./scripts/feeds update -a          # with the SDK, the two feeds lines can be skipped
+./scripts/feeds install -a
+git clone https://github.com/Arthur97172/luci-app-online-upgrade.git package/luci-app-online-upgrade
+make menuconfig   # LuCI → Applications → luci-app-online-upgrade
+
+# The Chinese translation is a separate subpackage: select the language first.
+# (luci.mk's DEFAULT is LUCI_LANG_zh_Hans||(ALL&&m); the SDK ships CONFIG_ALL=y so it
+#  already falls back to m — set it explicitly so we don't depend on that default.)
+echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
+make defconfig
+
+# Only the directory-level target is needed: LuciTranslation is evaluated inside the same
+# Makefile, so the i18n subpackage shares this builddir and is built along with it.
+# Note: there is no package/luci-i18n-online-upgrade-zh-cn/compile target.
+make package/luci-app-online-upgrade/compile V=s
+```
 
 ## Dependencies
 
